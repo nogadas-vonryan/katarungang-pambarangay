@@ -1,0 +1,26 @@
+info:
+  name: Create Case Record
+  type: http
+  seq: 21
+
+http:
+  method: POST
+  url: http://{{base_url}}/v1/cases/records
+  body:
+    type: json
+    data: |-
+      {
+        "test": "test data",
+        "complainants": [
+          "test",
+          "test 2",
+          "test 3"
+        ]
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

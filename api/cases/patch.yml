@@ -1,0 +1,21 @@
+info:
+  name: Patch Case Record
+  type: http
+  seq: 27
+
+http:
+  method: PATCH
+  url: http://{{base_url}}/v1/cases/records/case-001-26
+  body:
+    type: json
+    data: |-
+      {
+        "test": "tdddddesting"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

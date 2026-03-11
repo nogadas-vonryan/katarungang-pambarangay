@@ -1,0 +1,15 @@
+info:
+  name: Reload Stores
+  type: http
+  seq: 17
+
+http:
+  method: POST
+  url: http://{{base_url}}/v1/stores/reload
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

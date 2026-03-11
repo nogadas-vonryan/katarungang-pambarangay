@@ -1,0 +1,78 @@
+info:
+  name: Create Store
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: http://{{base_url}}/v1/stores
+  body:
+    type: json
+    data: |-
+      {
+        "name": "cases",
+        "type": "folder",
+        "description": "Core module for managing case records.",
+        "namingPattern": "cases-{id:3}-{YY}",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "filed",
+                "mediation",
+                "arbitration",
+                "conciliation"
+              ]
+            },
+            "priority": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ]
+            },
+            "complainants": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "respondents": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "assigned_to": {
+              "type": "string"
+            },
+            "complaint": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "title",
+            "status"
+          ]
+        }
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

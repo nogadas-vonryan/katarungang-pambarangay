@@ -1,0 +1,15 @@
+info:
+  name: Delete Case Record
+  type: http
+  seq: 29
+
+http:
+  method: DELETE
+  url: http://{{base_url}}/v1/cases/records/case-001-26
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
