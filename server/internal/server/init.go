@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -42,7 +43,13 @@ func (s *Server) initAuth() error {
 }
 
 func (s *Server) initJobs() error {
-	s.jobsMgr = jobs.New(DefaultJobWorkers, s.logger.Jobs())
+	s.jobsMgr = jobs.New(jobs.JobManagerConfig{
+		Workers:       DefaultJobWorkers,
+		Logger:        s.logger.Jobs(),
+		MaxJobs:       1000,
+		JobTTL:        24 * time.Hour,
+		CleanupPeriod: 1 * time.Hour,
+	})
 
 	s.jobsMgr.RegisterHandler(jobs.JobStoreScan, func(ctx context.Context, job *jobs.Job) error {
 		s.logger.Jobs().Info("job: running store scan", "job", job.ID)

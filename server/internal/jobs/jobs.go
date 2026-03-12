@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"sync"
 	"time"
 )
@@ -39,25 +40,48 @@ type Job struct {
 type JobHandler func(ctx context.Context, job *Job) error
 
 type JobManager struct {
-	mu       sync.RWMutex
-	jobs     map[string]*Job
-	queue    chan *Job
-	handlers map[JobType]JobHandler
-	logger   *slog.Logger
-	workers  int
-	closed   bool
+	mu            sync.RWMutex
+	jobs          map[string]*Job
+	queue         chan *Job
+	handlers      map[JobType]JobHandler
+	logger        *slog.Logger
+	workers       int
+	closed        bool
+	maxJobs       int
+	jobTTL        time.Duration
+	cleanupPeriod time.Duration
 }
 
-func New(workers int, logger *slog.Logger) *JobManager {
-	if logger == nil {
-		logger = slog.Default()
+type JobManagerConfig struct {
+	Workers       int
+	Logger        *slog.Logger
+	MaxJobs       int
+	JobTTL        time.Duration
+	CleanupPeriod time.Duration
+}
+
+func New(cfg JobManagerConfig) *JobManager {
+	if cfg.Logger == nil {
+		cfg.Logger = slog.Default()
+	}
+	if cfg.MaxJobs == 0 {
+		cfg.MaxJobs = 1000
+	}
+	if cfg.JobTTL == 0 {
+		cfg.JobTTL = 24 * time.Hour
+	}
+	if cfg.CleanupPeriod == 0 {
+		cfg.CleanupPeriod = 1 * time.Hour
 	}
 	return &JobManager{
-		jobs:     make(map[string]*Job),
-		queue:    make(chan *Job, 100),
-		handlers: make(map[JobType]JobHandler),
-		logger:   logger,
-		workers:  workers,
+		jobs:          make(map[string]*Job),
+		queue:         make(chan *Job, 100),
+		handlers:      make(map[JobType]JobHandler),
+		logger:        cfg.Logger,
+		workers:       cfg.Workers,
+		maxJobs:       cfg.MaxJobs,
+		jobTTL:        cfg.JobTTL,
+		cleanupPeriod: cfg.CleanupPeriod,
 	}
 }
 
@@ -76,7 +100,9 @@ func (m *JobManager) Start(ctx context.Context) {
 		go m.worker(ctx, i)
 	}
 
-	m.logger.Info("job manager started", "workers", m.workers)
+	go m.cleanupLoop(ctx)
+
+	m.logger.Info("job manager started", "workers", m.workers, "maxJobs", m.maxJobs, "jobTTL", m.jobTTL)
 }
 
 func (m *JobManager) worker(ctx context.Context, id int) {
@@ -168,6 +194,68 @@ func (m *JobManager) List() []*Job {
 		jobs = append(jobs, job)
 	}
 	return jobs
+}
+
+func (m *JobManager) cleanupLoop(ctx context.Context) {
+	ticker := time.NewTicker(m.cleanupPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			m.cleanup()
+		}
+	}
+}
+
+func (m *JobManager) cleanup() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now()
+	var toDelete []string
+
+	for id, job := range m.jobs {
+		if job.Status == JobStatusQueued || job.Status == JobStatusRunning {
+			continue
+		}
+
+		if job.CompletedAt != nil && now.Sub(*job.CompletedAt) > m.jobTTL {
+			toDelete = append(toDelete, id)
+			continue
+		}
+	}
+
+	if len(m.jobs)-len(toDelete) > m.maxJobs && len(toDelete) < len(m.jobs) {
+		type jobWithTime struct {
+			id        string
+			completed time.Time
+		}
+		var completedJobs []jobWithTime
+		for id, job := range m.jobs {
+			if job.Status != JobStatusQueued && job.Status != JobStatusRunning && job.CompletedAt != nil {
+				completedJobs = append(completedJobs, jobWithTime{id, *job.CompletedAt})
+			}
+		}
+		sort.Slice(completedJobs, func(i, j int) bool {
+			return completedJobs[i].completed.Before(completedJobs[j].completed)
+		})
+
+		excess := len(m.jobs) - m.maxJobs
+		for i := 0; i < excess && i < len(completedJobs); i++ {
+			toDelete = append(toDelete, completedJobs[i].id)
+		}
+	}
+
+	for _, id := range toDelete {
+		delete(m.jobs, id)
+	}
+
+	if len(toDelete) > 0 {
+		m.logger.Info("cleaned up jobs", "count", len(toDelete), "remaining", len(m.jobs))
+	}
 }
 
 func (m *JobManager) Close() error {
