@@ -3,13 +3,82 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"sync"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/kp-cms/server/internal/store"
 )
 
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type StoreAccessor struct {
+	stores  map[string]store.Store
+	storeMu *sync.RWMutex
+}
+
+func NewStoreAccessor(stores map[string]store.Store, storeMu *sync.RWMutex) *StoreAccessor {
+	return &StoreAccessor{
+		stores:  stores,
+		storeMu: storeMu,
+	}
+}
+
+func (p *StoreAccessor) Get(name string) (store.Store, bool) {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	st, ok := p.stores[name]
+	return st, ok
+}
+
+func (p *StoreAccessor) All() map[string]store.Store {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	result := make(map[string]store.Store, len(p.stores))
+	for k, v := range p.stores {
+		result[k] = v
+	}
+	return result
+}
+
+func (p *StoreAccessor) Lock() {
+	p.storeMu.Lock()
+}
+
+func (p *StoreAccessor) Unlock() {
+	p.storeMu.Unlock()
+}
+
+func (p *StoreAccessor) Exists(name string) bool {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	_, ok := p.stores[name]
+	return ok
+}
+
+func (p *StoreAccessor) Set(name string, st store.Store) {
+	p.storeMu.Lock()
+	p.stores[name] = st
+	p.storeMu.Unlock()
+}
+
+func (p *StoreAccessor) CreateIfNotExists(name string, fn func() (store.Store, error)) (store.Store, error) {
+	p.storeMu.Lock()
+	defer p.storeMu.Unlock()
+
+	if st, ok := p.stores[name]; ok {
+		return st, os.ErrExist
+	}
+
+	st, err := fn()
+	if err != nil {
+		return nil, err
+	}
+	p.stores[name] = st
+	return st, nil
 }
 
 const BearerPrefix = "Bearer "
