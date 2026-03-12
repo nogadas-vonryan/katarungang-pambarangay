@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/csv"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -32,19 +31,6 @@ type CSVStore struct {
 	path     string
 	metadata *store.StoreMetadata
 	locker   *store.RecordLocker
-	logger   interface{}
-}
-
-type storeMetaFile struct {
-	Version       int                    `json:"version"`
-	Name          string                 `json:"name"`
-	Type          string                 `json:"type"`
-	Path          string                 `json:"path"`
-	Schema        map[string]interface{} `json:"schema,omitempty"`
-	NamingPattern string                 `json:"namingPattern,omitempty"`
-	Counter       int                    `json:"counter"`
-	CreatedAt     time.Time              `json:"createdAt"`
-	UpdatedAt     time.Time              `json:"updatedAt"`
 }
 
 func init() {
@@ -125,39 +111,26 @@ func (s *CSVStore) loadStoreMeta() error {
 		return fmt.Errorf("read store meta: %w", err)
 	}
 
-	var meta storeMetaFile
-	if err := json.Unmarshal(data, &meta); err != nil {
+	meta, err := store.ParseStoreMeta(data)
+	if err != nil {
 		return fmt.Errorf("parse store meta: %w", err)
 	}
 
-	s.metadata.Name = meta.Name
-	s.metadata.Schema = meta.Schema
-	s.metadata.NamingPattern = meta.NamingPattern
-	s.metadata.Counter = meta.Counter
-	s.metadata.CreatedAt = meta.CreatedAt
-	s.metadata.UpdatedAt = meta.UpdatedAt
+	storeMeta := meta.ToMetadata()
+	s.metadata.Name = storeMeta.Name
+	s.metadata.Schema = storeMeta.Schema
+	s.metadata.NamingPattern = storeMeta.NamingPattern
+	s.metadata.Counter = storeMeta.Counter
+	s.metadata.CreatedAt = storeMeta.CreatedAt
+	s.metadata.UpdatedAt = storeMeta.UpdatedAt
 
 	return nil
 }
 
 func (s *CSVStore) saveStoreMeta() error {
-	meta := storeMetaFile{
-		Version:       1,
-		Name:          s.metadata.Name,
-		Type:          s.metadata.Type,
-		Path:          s.metadata.Path,
-		Schema:        s.metadata.Schema,
-		NamingPattern: s.metadata.NamingPattern,
-		Counter:       s.metadata.Counter,
-		CreatedAt:     s.metadata.CreatedAt,
-		UpdatedAt:     time.Now(),
-	}
+	meta := store.MetadataToMetaFile(s.metadata, 1)
 
-	if meta.CreatedAt.IsZero() {
-		meta.CreatedAt = time.Now()
-	}
-
-	data, err := json.MarshalIndent(meta, "", "  ")
+	data, err := store.WriteStoreMeta(meta)
 	if err != nil {
 		return fmt.Errorf("marshal store meta: %w", err)
 	}
