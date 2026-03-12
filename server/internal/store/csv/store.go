@@ -365,19 +365,21 @@ func (s *CSVStore) recordsToCSV(records []store.Record) ([][]string, error) {
 	return result, nil
 }
 
-func (s *CSVStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, error) {
+func (s *CSVStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, int, error) {
 	unlock := s.locker.RLock("list")
 	defer unlock()
 
 	data, err := s.readCSV()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	records, err := s.csvToRecords(data)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	total := len(records)
 
 	if opts.SortBy != "" {
 		slices.SortFunc(records, func(a, b store.Record) int {
@@ -418,7 +420,7 @@ func (s *CSVStore) List(ctx context.Context, opts store.ListOptions) ([]store.Re
 		}
 	}
 
-	return records, nil
+	return records, total, nil
 }
 
 func (s *CSVStore) Get(ctx context.Context, id string) (*store.Record, error) {

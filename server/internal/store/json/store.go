@@ -288,16 +288,17 @@ func (s *JSONStore) hasAutoID() bool {
 	return s.metadata.NamingPattern != "" && strings.Contains(s.metadata.NamingPattern, "{id}")
 }
 
-func (s *JSONStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, error) {
+func (s *JSONStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, int, error) {
 	unlock := s.locker.RLock("list")
 	defer unlock()
 
 	rf, err := s.loadRecords()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	records := make([]store.Record, len(rf.Records))
+	total := len(rf.Records)
+	records := make([]store.Record, total)
 	copy(records, rf.Records)
 
 	if opts.SortBy != "" {
@@ -343,7 +344,7 @@ func (s *JSONStore) List(ctx context.Context, opts store.ListOptions) ([]store.R
 		}
 	}
 
-	return records, nil
+	return records, total, nil
 }
 
 func (s *JSONStore) Get(ctx context.Context, id string) (*store.Record, error) {

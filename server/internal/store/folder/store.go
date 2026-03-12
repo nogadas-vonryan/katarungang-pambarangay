@@ -305,14 +305,16 @@ func (s *FolderStore) scanRecords() ([]string, error) {
 	return ids, nil
 }
 
-func (s *FolderStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, error) {
+func (s *FolderStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, int, error) {
 	unlock := s.locker.RLock("list")
 	defer unlock()
 
 	ids, err := s.scanRecords()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	total := len(ids)
 
 	records := make([]store.Record, 0, len(ids))
 	for _, id := range ids {
@@ -376,7 +378,7 @@ func (s *FolderStore) List(ctx context.Context, opts store.ListOptions) ([]store
 		}
 	}
 
-	return records, nil
+	return records, total, nil
 }
 
 func (s *FolderStore) Get(ctx context.Context, id string) (*store.Record, error) {

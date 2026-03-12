@@ -54,7 +54,7 @@ type Store interface {
 	Path() string
 	Metadata() (*StoreMetadata, error)
 
-	List(ctx context.Context, opts ListOptions) ([]Record, error)
+	List(ctx context.Context, opts ListOptions) ([]Record, int, error)
 	Get(ctx context.Context, id string) (*Record, error)
 	Create(ctx context.Context, data map[string]interface{}) (*Record, error)
 	Update(ctx context.Context, id string, data map[string]interface{}) (*Record, error)
@@ -99,4 +99,9 @@ func CreateStore(t, path string, metadata *StoreMetadata) (Store, error) {
 		return nil, ErrUnknownStoreType
 	}
 	return f(path, metadata)
+}
+
+func IsValidType(t string) bool {
+	_, ok := storeFactories[t]
+	return ok
 }

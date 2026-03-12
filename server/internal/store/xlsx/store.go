@@ -370,14 +370,16 @@ func (s *XLSXStore) writeRecords(records []store.Record) error {
 	return s.saveXLSX(f)
 }
 
-func (s *XLSXStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, error) {
+func (s *XLSXStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, int, error) {
 	unlock := s.locker.RLock("list")
 	defer unlock()
 
 	records, err := s.readRecords()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
+
+	total := len(records)
 
 	if opts.SortBy != "" {
 		slices.SortFunc(records, func(a, b store.Record) int {
@@ -422,7 +424,7 @@ func (s *XLSXStore) List(ctx context.Context, opts store.ListOptions) ([]store.R
 		}
 	}
 
-	return records, nil
+	return records, total, nil
 }
 
 func (s *XLSXStore) Get(ctx context.Context, id string) (*store.Record, error) {
