@@ -1,0 +1,22 @@
+info:
+  name: Upload File
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://{{base_url}}/v1/cases/records/case-007-26/files
+  body:
+    type: multipart-form
+    data:
+      - name: file
+        type: file
+        value:
+          - /home/von/Downloads/caffeine.png
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

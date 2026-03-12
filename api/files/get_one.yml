@@ -1,0 +1,15 @@
+info:
+  name: Get One File
+  type: http
+  seq: 3
+
+http:
+  method: GET
+  url: http://{{base_url}}/v1/cases/records/case-007-26/files/caffeine.png
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
