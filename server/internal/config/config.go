@@ -49,12 +49,6 @@ func (c *Config) SetDefaults() {
 	if c.LogRetention == 0 {
 		c.LogRetention = 7
 	}
-	if c.BootstrapUser == "" {
-		c.BootstrapUser = "admin"
-	}
-	if c.BootstrapPassword == "" {
-		c.BootstrapPassword = "admin"
-	}
 }
 
 func (c *Config) Validate() error {
@@ -63,6 +57,9 @@ func (c *Config) Validate() error {
 	}
 	if c.Port < 1 || c.Port > 65535 {
 		return errors.New("port must be between 1 and 65535")
+	}
+	if c.BootstrapUser == "" || c.BootstrapPassword == "" {
+		return errors.New("bootstrap credentials are required: set KP_BOOTSTRAP_USER and KP_BOOTSTRAP_PASSWORD environment variables")
 	}
 	validModes := map[Mode]bool{
 		ModeStandalone: true,

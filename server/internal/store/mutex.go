@@ -19,6 +19,7 @@ type RecordLocker struct {
 	refCnt map[string]int
 	ttl    time.Duration
 	stopCh chan struct{}
+	doneCh chan struct{}
 }
 
 func NewRecordLocker(ttl time.Duration) *RecordLocker {
@@ -27,12 +28,14 @@ func NewRecordLocker(ttl time.Duration) *RecordLocker {
 		refCnt: make(map[string]int),
 		ttl:    ttl,
 		stopCh: make(chan struct{}),
+		doneCh: make(chan struct{}),
 	}
 	go l.cleanupLoop()
 	return l
 }
 
 func (l *RecordLocker) cleanupLoop() {
+	defer close(l.doneCh)
 	ticker := time.NewTicker(l.ttl)
 	defer ticker.Stop()
 	for {
@@ -105,6 +108,7 @@ func (l *RecordLocker) Remove(key string) {
 
 func (l *RecordLocker) Close() error {
 	close(l.stopCh)
+	<-l.doneCh
 	return nil
 }
 
