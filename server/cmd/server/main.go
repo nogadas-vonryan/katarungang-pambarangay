@@ -7,6 +7,11 @@ import (
 
 	"github.com/kp-cms/server/internal/config"
 	"github.com/kp-cms/server/internal/server"
+
+	_ "github.com/kp-cms/server/internal/store/csv"
+	_ "github.com/kp-cms/server/internal/store/folder"
+	_ "github.com/kp-cms/server/internal/store/json"
+	_ "github.com/kp-cms/server/internal/store/xlsx"
 )
 
 var (

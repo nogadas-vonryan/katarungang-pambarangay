@@ -182,7 +182,7 @@ func (svc *IndexService) RegisterStore(name string, st store.Store) error {
 
 	svc.stores[name] = st
 
-	records, err := st.List(context.Background(), store.ListOptions{})
+	records, _, err := st.List(context.Background(), store.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (svc *IndexService) RebuildIndex(ctx context.Context, storeName string) err
 		return nil
 	}
 
-	records, err := st.List(ctx, store.ListOptions{})
+	records, _, err := st.List(ctx, store.ListOptions{})
 	if err != nil {
 		return err
 	}
