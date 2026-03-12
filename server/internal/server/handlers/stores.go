@@ -5,10 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
-	"sync"
 
 	"github.com/kp-cms/server/internal/jobs"
+	"github.com/kp-cms/server/internal/sanitize"
 	"github.com/kp-cms/server/internal/store"
 )
 
@@ -22,44 +21,15 @@ type createStoreRequest struct {
 	NamingPattern string                 `json:"namingPattern,omitempty"`
 }
 
-type storeMetaJSON struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-}
-
-type storeHandlerStoreProvider struct {
-	stores  map[string]store.Store
-	storeMu *sync.RWMutex
-}
-
-func (p *storeHandlerStoreProvider) Get(name string) (store.Store, bool) {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	st, ok := p.stores[name]
-	return st, ok
-}
-
-func (p *storeHandlerStoreProvider) All() map[string]store.Store {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	result := make(map[string]store.Store, len(p.stores))
-	for k, v := range p.stores {
-		result[k] = v
-	}
-	return result
-}
-
 type StoreHandler struct {
-	stores  *storeHandlerStoreProvider
-	storeMu *sync.RWMutex
+	stores  *StoreAccessor
 	dataDir string
 	jobsMgr *jobs.JobManager
 }
 
-func NewStoreHandler(stores map[string]store.Store, storeMu *sync.RWMutex, dataDir string, jobsMgr *jobs.JobManager) *StoreHandler {
+func NewStoreHandler(stores *StoreAccessor, dataDir string, jobsMgr *jobs.JobManager) *StoreHandler {
 	return &StoreHandler{
-		stores:  &storeHandlerStoreProvider{stores: stores, storeMu: storeMu},
-		storeMu: storeMu,
+		stores:  stores,
 		dataDir: dataDir,
 		jobsMgr: jobsMgr,
 	}
@@ -97,7 +67,7 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.Contains(req.Name, "..") || strings.HasPrefix(req.Name, ".") {
+	if !sanitize.Path(req.Name) {
 		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "invalid store name: path traversal detected")
 		return
 	}
@@ -113,8 +83,7 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 
 	storePath := filepath.Join(h.dataDir, req.Name)
 
-	_, exists := h.stores.Get(req.Name)
-	if exists {
+	if h.stores.Exists(req.Name) {
 		WriteError(w, r, http.StatusConflict, ErrCodeConflict, "store already exists")
 		return
 	}
@@ -163,9 +132,13 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.storeMu.Lock()
-	h.stores.stores[req.Name] = st
-	h.storeMu.Unlock()
+	if h.stores.Exists(req.Name) {
+		os.RemoveAll(storePath)
+		WriteError(w, r, http.StatusConflict, ErrCodeConflict, "store was created by another request")
+		return
+	}
+
+	h.stores.Set(req.Name, st)
 
 	WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "store created",

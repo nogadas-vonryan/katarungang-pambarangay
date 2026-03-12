@@ -1,43 +1,26 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"path/filepath"
-	"strings"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/kp-cms/server/internal/store"
+	"github.com/kp-cms/server/internal/sanitize"
 )
 
-type fileStoreProvider struct {
-	stores  map[string]store.Store
-	storeMu *sync.RWMutex
-}
-
-func (p *fileStoreProvider) Get(name string) (store.Store, bool) {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	st, ok := p.stores[name]
-	return st, ok
-}
-
-func (p *fileStoreProvider) All() map[string]store.Store {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	return p.stores
-}
+const maxFileSize = 10 * 1024 * 1024
 
 type FileHandler struct {
 	BaseHandler
 }
 
-func NewFileHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *FileHandler {
+func NewFileHandler(stores *StoreAccessor) *FileHandler {
 	return &FileHandler{
 		BaseHandler: BaseHandler{
-			stores: &fileStoreProvider{stores: stores, storeMu: storeMu},
+			stores: stores,
 		},
 	}
 }
@@ -87,13 +70,19 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.HasPrefix(filename, ".") || filename == ".store.json" || filename == ".meta.json" {
+	if !sanitize.FileName(filename) {
 		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "cannot upload file with that name")
 		return
 	}
 
-	data, err := io.ReadAll(file)
+	limitedReader := http.MaxBytesReader(w, file, maxFileSize)
+	data, err := io.ReadAll(limitedReader)
 	if err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			WriteError(w, r, http.StatusRequestEntityTooLarge, ErrCodeBadRequest, "file size exceeds maximum allowed (10MB)")
+			return
+		}
 		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "failed to read file")
 		return
 	}
