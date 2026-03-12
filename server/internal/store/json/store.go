@@ -304,7 +304,10 @@ func (s *JSONStore) Create(ctx context.Context, data map[string]interface{}) (*s
 	if hasUserID {
 		delete(data, "_id")
 
-		rf, _ := s.loadRecords()
+		rf, err := s.loadRecords()
+		if err != nil {
+			return nil, fmt.Errorf("load records: %w", err)
+		}
 		for _, r := range rf.Records {
 			if r.ID == userID {
 				return nil, store.ErrRecordExists
