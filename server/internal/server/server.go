@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -119,36 +118,6 @@ func (s *Server) getStore(name string) (store.Store, bool) {
 	defer s.storeMu.RUnlock()
 	st, ok := s.stores[name]
 	return st, ok
-}
-
-func (s *Server) writeJSON(w http.ResponseWriter, code int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	if data != nil {
-		json.NewEncoder(w).Encode(data)
-	}
-}
-
-func (s *Server) validateETag(r *http.Request, st store.Store, id string) (*store.Record, bool, error) {
-	ifMatch := r.Header.Get("If-Match")
-	if ifMatch == "" {
-		return nil, true, nil
-	}
-
-	existing, err := st.Get(r.Context(), id)
-	if err != nil {
-		return nil, false, err
-	}
-
-	if ifMatch != existing.ETag {
-		return existing, false, nil
-	}
-
-	return existing, true, nil
-}
-
-func getUserFromContext(ctx context.Context) interface{} {
-	return ctx.Value(ctxKeyUser)
 }
 
 func contextWithUser(ctx context.Context, user interface{}) context.Context {

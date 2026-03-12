@@ -31,7 +31,7 @@ func HandleLogin(authSvc *auth.AuthService, auditLogger interface{}) http.Handle
 			Expires:  session.ExpiresAt,
 		})
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"token":   session.Token,
 			"expires": session.ExpiresAt.Format(time.RFC3339),
 		})
@@ -55,7 +55,7 @@ func HandleLogout(authSvc *auth.AuthService) http.HandlerFunc {
 			})
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"message": "logged out",
 		})
 	}

@@ -10,7 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -44,7 +43,6 @@ type Session struct {
 type DB struct {
 	db     *sql.DB
 	logger *slog.Logger
-	mu     sync.RWMutex
 }
 
 func New(dbPath string, logger *slog.Logger) (*DB, error) {

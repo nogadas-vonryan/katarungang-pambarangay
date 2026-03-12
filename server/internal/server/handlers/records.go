@@ -11,28 +11,39 @@ import (
 	"github.com/kp-cms/server/internal/store"
 )
 
-type RecordHandler struct {
+type recordStoreProvider struct {
 	stores  map[string]store.Store
 	storeMu *sync.RWMutex
 }
 
-func NewRecordHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *RecordHandler {
-	return &RecordHandler{
-		stores:  stores,
-		storeMu: storeMu,
-	}
+func (p *recordStoreProvider) Get(name string) (store.Store, bool) {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	st, ok := p.stores[name]
+	return st, ok
 }
 
-func (h *RecordHandler) getStore(name string) (store.Store, bool) {
-	h.storeMu.RLock()
-	defer h.storeMu.RUnlock()
-	st, ok := h.stores[name]
-	return st, ok
+func (p *recordStoreProvider) All() map[string]store.Store {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	return p.stores
+}
+
+type RecordHandler struct {
+	BaseHandler
+}
+
+func NewRecordHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *RecordHandler {
+	return &RecordHandler{
+		BaseHandler: BaseHandler{
+			stores: &recordStoreProvider{stores: stores, storeMu: storeMu},
+		},
+	}
 }
 
 func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -94,7 +105,7 @@ func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"records": records,
 		"total":   total,
 		"limit":   opts.Limit,
@@ -104,7 +115,7 @@ func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
 
 func (h *RecordHandler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -123,12 +134,12 @@ func (h *RecordHandler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Location", fmt.Sprintf("/v1/%s/records/%s", storeName, record.ID))
-	writeJSON(w, http.StatusCreated, record)
+	WriteJSON(w, http.StatusCreated, record)
 }
 
 func (h *RecordHandler) GetRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -142,12 +153,12 @@ func (h *RecordHandler) GetRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("ETag", record.ETag)
-	writeJSON(w, http.StatusOK, record)
+	WriteJSON(w, http.StatusOK, record)
 }
 
 func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -155,17 +166,13 @@ func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	ifMatch := r.Header.Get("If-Match")
-	if ifMatch != "" {
-		existing, err := st.Get(r.Context(), id)
+	if _, valid, err := h.ValidateETagFromRequest(r, st, id); err != nil || !valid {
 		if err != nil {
 			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgRecordNotFound)
 			return
 		}
-		if ifMatch != existing.ETag {
-			WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
-			return
-		}
+		WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
+		return
 	}
 
 	var data map[string]interface{}
@@ -181,12 +188,12 @@ func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("ETag", record.ETag)
-	writeJSON(w, http.StatusOK, record)
+	WriteJSON(w, http.StatusOK, record)
 }
 
 func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -194,17 +201,13 @@ func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	ifMatch := r.Header.Get("If-Match")
-	if ifMatch != "" {
-		existing, err := st.Get(r.Context(), id)
+	if _, valid, err := h.ValidateETagFromRequest(r, st, id); err != nil || !valid {
 		if err != nil {
 			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgRecordNotFound)
 			return
 		}
-		if ifMatch != existing.ETag {
-			WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
-			return
-		}
+		WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
+		return
 	}
 
 	var data map[string]interface{}
@@ -220,12 +223,12 @@ func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("ETag", record.ETag)
-	writeJSON(w, http.StatusOK, record)
+	WriteJSON(w, http.StatusOK, record)
 }
 
 func (h *RecordHandler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return

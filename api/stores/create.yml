@@ -13,7 +13,7 @@ http:
         "name": "cases",
         "type": "folder",
         "description": "Core module for managing case records.",
-        "namingPattern": "cases-{id:3}-{YY}",
+        "namingPattern": "case-{id:3}-{YY}",
         "schema": {
           "type": "object",
           "properties": {

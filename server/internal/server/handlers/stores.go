@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/kp-cms/server/internal/jobs"
 	"github.com/kp-cms/server/internal/store"
@@ -29,29 +27,38 @@ type storeMetaJSON struct {
 	Type string `json:"type"`
 }
 
-type storeMetaFile struct {
-	Version       int                    `json:"version"`
-	Name          string                 `json:"name"`
-	Type          string                 `json:"type"`
-	Path          string                 `json:"path"`
-	Schema        map[string]interface{} `json:"schema,omitempty"`
-	NamingPattern string                 `json:"namingPattern,omitempty"`
-	Counter       int                    `json:"counter"`
-	CreatedAt     time.Time              `json:"createdAt"`
-	UpdatedAt     time.Time              `json:"updatedAt"`
+type storeHandlerStoreProvider struct {
+	stores  map[string]store.Store
+	storeMu *sync.RWMutex
+}
+
+func (p *storeHandlerStoreProvider) Get(name string) (store.Store, bool) {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	st, ok := p.stores[name]
+	return st, ok
+}
+
+func (p *storeHandlerStoreProvider) All() map[string]store.Store {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	result := make(map[string]store.Store, len(p.stores))
+	for k, v := range p.stores {
+		result[k] = v
+	}
+	return result
 }
 
 type StoreHandler struct {
-	stores   map[string]store.Store
-	storeMu  *sync.RWMutex
-	dataDir  string
-	jobsMgr  *jobs.JobManager
-	auditLog interface{}
+	stores  *storeHandlerStoreProvider
+	storeMu *sync.RWMutex
+	dataDir string
+	jobsMgr *jobs.JobManager
 }
 
 func NewStoreHandler(stores map[string]store.Store, storeMu *sync.RWMutex, dataDir string, jobsMgr *jobs.JobManager) *StoreHandler {
 	return &StoreHandler{
-		stores:  stores,
+		stores:  &storeHandlerStoreProvider{stores: stores, storeMu: storeMu},
 		storeMu: storeMu,
 		dataDir: dataDir,
 		jobsMgr: jobsMgr,
@@ -59,15 +66,14 @@ func NewStoreHandler(stores map[string]store.Store, storeMu *sync.RWMutex, dataD
 }
 
 func (h *StoreHandler) ListStores(w http.ResponseWriter, r *http.Request) {
-	h.storeMu.RLock()
-	stores := make([]interface{}, 0, len(h.stores))
-	for _, st := range h.stores {
+	allStores := h.stores.All()
+	stores := make([]interface{}, 0, len(allStores))
+	for _, st := range allStores {
 		meta, _ := st.Metadata()
 		stores = append(stores, meta)
 	}
-	h.storeMu.RUnlock()
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"stores": stores,
 		"total":  len(stores),
 	})
@@ -107,9 +113,7 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 
 	storePath := filepath.Join(h.dataDir, req.Name)
 
-	h.storeMu.RLock()
-	_, exists := h.stores[req.Name]
-	h.storeMu.RUnlock()
+	_, exists := h.stores.Get(req.Name)
 	if exists {
 		WriteError(w, r, http.StatusConflict, ErrCodeConflict, "store already exists")
 		return
@@ -136,20 +140,9 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 		IndexReady:    false,
 	}
 
-	now := time.Now()
-	metaFile := storeMetaFile{
-		Version:       1,
-		Name:          req.Name,
-		Type:          req.Type,
-		Path:          storePath,
-		Schema:        req.Schema,
-		NamingPattern: req.NamingPattern,
-		Counter:       0,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}
+	metaFile := store.MetadataToMetaFile(&meta, 1)
 
-	metaData, err := json.MarshalIndent(metaFile, "", " ")
+	metaData, err := store.WriteStoreMeta(metaFile)
 	if err != nil {
 		os.RemoveAll(storePath)
 		WriteError(w, r, http.StatusInternalServerError, ErrCodeInternal, "failed to marshal metadata")
@@ -171,10 +164,10 @@ func (h *StoreHandler) CreateStore(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.storeMu.Lock()
-	h.stores[req.Name] = st
+	h.stores.stores[req.Name] = st
 	h.storeMu.Unlock()
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "store created",
 		"store":   meta,
 	})
@@ -190,7 +183,7 @@ func (h *StoreHandler) ReloadStores(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
+	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
 		"jobId":   job.ID,
 		"message": "store reload initiated",
 	})

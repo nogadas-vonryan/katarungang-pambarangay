@@ -12,28 +12,39 @@ import (
 	"github.com/kp-cms/server/internal/store"
 )
 
-type FileHandler struct {
+type fileStoreProvider struct {
 	stores  map[string]store.Store
 	storeMu *sync.RWMutex
 }
 
-func NewFileHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *FileHandler {
-	return &FileHandler{
-		stores:  stores,
-		storeMu: storeMu,
-	}
+func (p *fileStoreProvider) Get(name string) (store.Store, bool) {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	st, ok := p.stores[name]
+	return st, ok
 }
 
-func (h *FileHandler) getStore(name string) (store.Store, bool) {
-	h.storeMu.RLock()
-	defer h.storeMu.RUnlock()
-	st, ok := h.stores[name]
-	return st, ok
+func (p *fileStoreProvider) All() map[string]store.Store {
+	p.storeMu.RLock()
+	defer p.storeMu.RUnlock()
+	return p.stores
+}
+
+type FileHandler struct {
+	BaseHandler
+}
+
+func NewFileHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *FileHandler {
+	return &FileHandler{
+		BaseHandler: BaseHandler{
+			stores: &fileStoreProvider{stores: stores, storeMu: storeMu},
+		},
+	}
 }
 
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -47,7 +58,7 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"files": files,
 		"total": len(files),
 	})
@@ -55,7 +66,7 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
 
 func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -92,7 +103,7 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"message": "file uploaded",
 		"name":    filename,
 		"size":    header.Size,
@@ -101,7 +112,7 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 
 func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
@@ -125,7 +136,7 @@ func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.getStore(storeName)
+	st, ok := h.GetStore(storeName)
 	if !ok {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return

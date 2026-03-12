@@ -23,7 +23,7 @@ func (h *JobHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
 	for i, job := range jobsList {
 		resp[i] = jobs.JobToResponse(job)
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"jobs": resp,
 	})
 }
@@ -35,5 +35,5 @@ func (h *JobHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, "job not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, jobs.JobToResponse(job))
+	WriteJSON(w, http.StatusOK, jobs.JobToResponse(job))
 }

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -38,12 +37,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"setupStatus": setupStatus,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(status)
+	handlers.WriteJSON(w, http.StatusOK, status)
 }
 
 func (s *Server) handleSetupStatus(w http.ResponseWriter, r *http.Request) {
-	s.writeJSON(w, http.StatusOK, s.setupSvc.GetStatus())
+	handlers.WriteJSON(w, http.StatusOK, s.setupSvc.GetStatus())
 }
 
 func (s *Server) handleSetupComplete(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +49,7 @@ func (s *Server) handleSetupComplete(w http.ResponseWriter, r *http.Request) {
 		handlers.WriteError(w, r, http.StatusBadRequest, handlers.ErrCodeBadRequest, err.Error())
 		return
 	}
-	s.writeJSON(w, http.StatusOK, map[string]interface{}{
+	handlers.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"message": "setup completed",
 	})
 }
