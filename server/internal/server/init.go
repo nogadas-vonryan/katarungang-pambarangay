@@ -154,6 +154,7 @@ func (s *Server) setupRouter() {
 	s.router.Use(s.accessLogger)
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(s.corsMiddleware)
+	s.router.Use(s.bodyLimitMiddleware)
 
 	s.router.Get("/health", s.handleHealth)
 

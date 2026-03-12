@@ -8,7 +8,7 @@ import (
 )
 
 type BaseHandler struct {
-	stores StoreProvider
+	stores *StoreAccessor
 }
 
 func (h *BaseHandler) GetStore(name string) (store.Store, bool) {

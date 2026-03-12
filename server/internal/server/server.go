@@ -25,6 +25,7 @@ type Server struct {
 	httpSrv  *http.Server
 	stores   map[string]store.Store
 	storeMu  sync.RWMutex
+	provider *handlers.StoreAccessor
 	stopCh   chan struct{}
 	authSvc  *auth.AuthService
 	jobsMgr  *jobs.JobManager
@@ -43,6 +44,8 @@ func New(cfg *config.Config, logger *logging.Logger) (*Server, error) {
 		stores: make(map[string]store.Store),
 		stopCh: make(chan struct{}),
 	}
+
+	s.provider = handlers.NewStoreAccessor(s.stores, &s.storeMu)
 
 	if err := s.initAuth(); err != nil {
 		return nil, fmt.Errorf("init auth: %w", err)
@@ -129,8 +132,8 @@ func contextWithRequestID(ctx context.Context, id string) context.Context {
 }
 
 func (s *Server) initHandlers() {
-	s.storeHandler = handlers.NewStoreHandler(s.stores, &s.storeMu, s.cfg.DataDir, s.jobsMgr)
-	s.recordHandler = handlers.NewRecordHandler(s.stores, &s.storeMu)
+	s.storeHandler = handlers.NewStoreHandler(s.provider, s.cfg.DataDir, s.jobsMgr)
+	s.recordHandler = handlers.NewRecordHandler(s.provider)
 	s.jobHandler = handlers.NewJobHandler(s.jobsMgr)
-	s.fileHandler = handlers.NewFileHandler(s.stores, &s.storeMu)
+	s.fileHandler = handlers.NewFileHandler(s.provider)
 }

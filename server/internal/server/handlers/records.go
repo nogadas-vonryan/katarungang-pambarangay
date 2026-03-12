@@ -5,38 +5,19 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kp-cms/server/internal/store"
 )
 
-type recordStoreProvider struct {
-	stores  map[string]store.Store
-	storeMu *sync.RWMutex
-}
-
-func (p *recordStoreProvider) Get(name string) (store.Store, bool) {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	st, ok := p.stores[name]
-	return st, ok
-}
-
-func (p *recordStoreProvider) All() map[string]store.Store {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	return p.stores
-}
-
 type RecordHandler struct {
 	BaseHandler
 }
 
-func NewRecordHandler(stores map[string]store.Store, storeMu *sync.RWMutex) *RecordHandler {
+func NewRecordHandler(stores *StoreAccessor) *RecordHandler {
 	return &RecordHandler{
 		BaseHandler: BaseHandler{
-			stores: &recordStoreProvider{stores: stores, storeMu: storeMu},
+			stores: stores,
 		},
 	}
 }
