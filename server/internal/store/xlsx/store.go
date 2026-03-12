@@ -25,6 +25,8 @@ const (
 	StoreMetaFileName = ".store.json"
 )
 
+var xlsxIDPatternRe = regexp.MustCompile(`\{id(?::(\d+))?\}`)
+
 type XLSXStore struct {
 	name     string
 	path     string
@@ -251,7 +253,7 @@ func (s *XLSXStore) generateETag(id string, version int) string {
 }
 
 func (s *XLSXStore) hasAutoID() bool {
-	return s.metadata.NamingPattern != "" && strings.Contains(s.metadata.NamingPattern, "{id}")
+	return s.metadata.NamingPattern != "" && xlsxIDPatternRe.MatchString(s.metadata.NamingPattern)
 }
 
 func (s *XLSXStore) readRecords() ([]store.Record, error) {

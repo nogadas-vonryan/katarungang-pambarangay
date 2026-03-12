@@ -10,6 +10,7 @@ type Locker interface {
 	Lock(key string) func()
 	RLock(key string) func()
 	Remove(key string)
+	Close() error
 }
 
 type RecordLocker struct {
@@ -47,15 +48,12 @@ func (l *RecordLocker) cleanupLoop() {
 func (l *RecordLocker) removeStale() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	now := time.Now()
-	for key, m := range l.locks {
+	for key := range l.locks {
 		if l.refCnt[key] <= 0 {
 			delete(l.locks, key)
 			delete(l.refCnt, key)
-			_ = m
 		}
 	}
-	_ = now
 }
 
 func (l *RecordLocker) getOrCreate(key string) *sync.RWMutex {

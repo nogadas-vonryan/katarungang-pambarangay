@@ -18,8 +18,11 @@ type createStoreRequest struct {
 }
 
 type storeMetaJSON struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name          string                 `json:"name"`
+	Type          string                 `json:"type"`
+	Schema        map[string]interface{} `json:"schema,omitempty"`
+	NamingPattern string                 `json:"namingPattern,omitempty"`
+	Counter       int                    `json:"counter"`
 }
 
 type storeMetaFile struct {

@@ -120,10 +120,13 @@ func (s *Server) initStores() error {
 		}
 
 		storeMeta := &store.StoreMetadata{
-			Name:       meta.Name,
-			Type:       meta.Type,
-			Path:       storePath,
-			IndexReady: false,
+			Name:          meta.Name,
+			Type:          meta.Type,
+			Path:          storePath,
+			Schema:        meta.Schema,
+			NamingPattern: meta.NamingPattern,
+			Counter:       meta.Counter,
+			IndexReady:    false,
 		}
 
 		st, err := store.CreateStore(meta.Type, storePath, storeMeta)

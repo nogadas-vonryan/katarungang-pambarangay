@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 )
 
@@ -87,13 +88,20 @@ type StoreEvent struct {
 
 type StoreFactory func(path string, metadata *StoreMetadata) (Store, error)
 
-var storeFactories = make(map[string]StoreFactory)
+var (
+	storeFactories = make(map[string]StoreFactory)
+	factoryMu      sync.RWMutex
+)
 
 func RegisterStoreType(t string, f StoreFactory) {
+	factoryMu.Lock()
+	defer factoryMu.Unlock()
 	storeFactories[t] = f
 }
 
 func CreateStore(t, path string, metadata *StoreMetadata) (Store, error) {
+	factoryMu.RLock()
+	defer factoryMu.RUnlock()
 	f, ok := storeFactories[t]
 	if !ok {
 		return nil, ErrUnknownStoreType
@@ -102,6 +110,8 @@ func CreateStore(t, path string, metadata *StoreMetadata) (Store, error) {
 }
 
 func IsValidType(t string) bool {
+	factoryMu.RLock()
+	defer factoryMu.RUnlock()
 	_, ok := storeFactories[t]
 	return ok
 }

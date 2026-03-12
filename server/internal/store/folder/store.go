@@ -11,13 +11,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kp-cms/server/internal/store"
 )
 
@@ -31,20 +28,8 @@ type FolderStore struct {
 	name     string
 	path     string
 	metadata *store.StoreMetadata
-	locker   *store.RecordLocker
+	locker   store.Locker
 	logger   *slog.Logger
-}
-
-type storeMetaFile struct {
-	Version       int                    `json:"version"`
-	Name          string                 `json:"name"`
-	Type          string                 `json:"type"`
-	Path          string                 `json:"path"`
-	Schema        map[string]interface{} `json:"schema,omitempty"`
-	NamingPattern string                 `json:"namingPattern,omitempty"`
-	Counter       int                    `json:"counter"`
-	CreatedAt     time.Time              `json:"createdAt"`
-	UpdatedAt     time.Time              `json:"updatedAt"`
 }
 
 type recordMetaFile struct {
@@ -122,39 +107,26 @@ func (s *FolderStore) loadStoreMeta() error {
 		return fmt.Errorf("read store meta: %w", err)
 	}
 
-	var meta storeMetaFile
-	if err := json.Unmarshal(data, &meta); err != nil {
+	meta, err := store.ParseStoreMeta(data)
+	if err != nil {
 		return fmt.Errorf("parse store meta: %w", err)
 	}
 
-	s.metadata.Name = meta.Name
-	s.metadata.Schema = meta.Schema
-	s.metadata.NamingPattern = meta.NamingPattern
-	s.metadata.Counter = meta.Counter
-	s.metadata.CreatedAt = meta.CreatedAt
-	s.metadata.UpdatedAt = meta.UpdatedAt
+	storeMeta := meta.ToMetadata()
+	s.metadata.Name = storeMeta.Name
+	s.metadata.Schema = storeMeta.Schema
+	s.metadata.NamingPattern = storeMeta.NamingPattern
+	s.metadata.Counter = storeMeta.Counter
+	s.metadata.CreatedAt = storeMeta.CreatedAt
+	s.metadata.UpdatedAt = storeMeta.UpdatedAt
 
 	return nil
 }
 
 func (s *FolderStore) saveStoreMeta() error {
-	meta := storeMetaFile{
-		Version:       1,
-		Name:          s.metadata.Name,
-		Type:          s.metadata.Type,
-		Path:          s.metadata.Path,
-		Schema:        s.metadata.Schema,
-		NamingPattern: s.metadata.NamingPattern,
-		Counter:       s.metadata.Counter,
-		CreatedAt:     s.metadata.CreatedAt,
-		UpdatedAt:     time.Now(),
-	}
+	meta := store.MetadataToMetaFile(s.metadata, 1)
 
-	if meta.CreatedAt.IsZero() {
-		meta.CreatedAt = time.Now()
-	}
-
-	data, err := json.MarshalIndent(meta, "", "  ")
+	data, err := store.WriteStoreMeta(meta)
 	if err != nil {
 		return fmt.Errorf("marshal store meta: %w", err)
 	}
@@ -209,10 +181,7 @@ func (s *FolderStore) saveRecord(id string, meta *recordMetaFile) error {
 	return nil
 }
 
-var (
-	idRe   = regexp.MustCompile(`\{id(?::(\d+))?\}`)
-	uuidRe = regexp.MustCompile(`\{uuid(?::(\d+))?\}`)
-)
+var folderIDGen = store.NewIDGenerator()
 
 func (s *FolderStore) generateID() (string, error) {
 	s.metadata.Counter++
@@ -223,39 +192,10 @@ func (s *FolderStore) generateID() (string, error) {
 		return hex.EncodeToString(hash[:])[:16], nil
 	}
 
-	now := time.Now()
-
-	id := pattern
-	id = strings.ReplaceAll(id, "{YYYY}", now.Format("2006"))
-	id = strings.ReplaceAll(id, "{YY}", now.Format("06"))
-	id = strings.ReplaceAll(id, "{MM}", now.Format("01"))
-	id = strings.ReplaceAll(id, "{DD}", now.Format("02"))
-	id = strings.ReplaceAll(id, "{date}", now.Format("2006-01-02"))
-	id = strings.ReplaceAll(id, "{day}", fmt.Sprintf("%03d", now.YearDay()))
-
-	id = idRe.ReplaceAllStringFunc(id, func(match string) string {
-		padding := 1
-		if len(match) > 4 && match[3:4] == ":" {
-			if p, err := strconv.Atoi(match[4 : len(match)-1]); err == nil && p > 0 {
-				padding = p
-			}
-		}
-		return fmt.Sprintf("%0*d", padding, s.metadata.Counter)
-	})
-
-	id = uuidRe.ReplaceAllStringFunc(id, func(match string) string {
-		length := 8
-		if len(match) > 7 && match[6:7] == ":" {
-			if l, err := strconv.Atoi(match[7 : len(match)-1]); err == nil && l > 0 {
-				length = l
-			}
-		}
-		u := uuid.New().String()
-		if length < len(u) {
-			u = u[:length]
-		}
-		return u
-	})
+	id, err := folderIDGen.Generate(pattern, s.metadata.Counter)
+	if err != nil {
+		return "", err
+	}
 
 	if err := s.saveStoreMeta(); err != nil {
 		return "", err
@@ -265,18 +205,15 @@ func (s *FolderStore) generateID() (string, error) {
 }
 
 func (s *FolderStore) generateUUID() string {
-	return uuid.New().String()
+	return store.GenerateUUID()
 }
 
 func (s *FolderStore) generateETag(id string, version int) string {
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%s:%d", id, version)))
-	return fmt.Sprintf(`"%s"`, hex.EncodeToString(hash[:])[:16])
+	return store.GenerateETag(id, version)
 }
 
-var hasIDPatternRe = regexp.MustCompile(`\{id(?::\d+)?\}`)
-
 func (s *FolderStore) hasAutoID() bool {
-	return s.metadata.NamingPattern != "" && hasIDPatternRe.MatchString(s.metadata.NamingPattern)
+	return folderIDGen.HasAutoID(s.metadata.NamingPattern)
 }
 
 func (s *FolderStore) scanRecords() ([]string, error) {

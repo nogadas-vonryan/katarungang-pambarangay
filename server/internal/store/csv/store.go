@@ -25,6 +25,8 @@ const (
 	StoreMetaFileName = ".store.json"
 )
 
+var csvIDPatternRe = regexp.MustCompile(`\{id(?::(\d+))?\}`)
+
 type CSVStore struct {
 	name     string
 	path     string
@@ -281,7 +283,7 @@ func (s *CSVStore) generateETag(id string, version int) string {
 }
 
 func (s *CSVStore) hasAutoID() bool {
-	return s.metadata.NamingPattern != "" && strings.Contains(s.metadata.NamingPattern, "{id}")
+	return s.metadata.NamingPattern != "" && csvIDPatternRe.MatchString(s.metadata.NamingPattern)
 }
 
 func (s *CSVStore) csvToRecords(data [][]string) ([]store.Record, error) {
