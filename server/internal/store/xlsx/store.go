@@ -291,14 +291,16 @@ func (s *XLSXStore) readRecords() ([]store.Record, error) {
 }
 
 func (s *XLSXStore) writeRecords(records []store.Record) error {
-	f, err := s.openXLSX()
-	if err != nil {
-		return err
-	}
+	f := excelize.NewFile()
 	defer f.Close()
 
-	f.DeleteSheet("Records")
-	f.NewSheet("Records")
+	if err := f.DeleteSheet("Sheet1"); err != nil {
+		return fmt.Errorf("delete default sheet: %w", err)
+	}
+
+	if _, err := f.NewSheet("Records"); err != nil {
+		return fmt.Errorf("create records sheet: %w", err)
+	}
 
 	headers := []string{"_id", "_uuid", "_createdAt", "_updatedAt", "_version"}
 	seenHeaders := make(map[string]bool)
@@ -314,6 +316,8 @@ func (s *XLSXStore) writeRecords(records []store.Record) error {
 			}
 		}
 	}
+
+	slices.Sort(headers[5:])
 
 	for col, header := range headers {
 		cell, _ := excelize.CoordinatesToCellName(col+1, 1)
@@ -342,7 +346,18 @@ func (s *XLSXStore) writeRecords(records []store.Record) error {
 		}
 	}
 
-	return s.saveXLSX(f)
+	tmpPath := s.dataFilePath() + ".tmp.xlsx"
+	if err := f.SaveAs(tmpPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("save to temp: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, s.dataFilePath()); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("rename temp file: %w", err)
+	}
+
+	return nil
 }
 
 func (s *XLSXStore) List(ctx context.Context, opts store.ListOptions) ([]store.Record, int, error) {
