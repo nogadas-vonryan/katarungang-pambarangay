@@ -26,10 +26,8 @@ func NewFileHandler(stores *StoreAccessor) *FileHandler {
 }
 
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -48,10 +46,8 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -100,10 +96,8 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -124,10 +118,8 @@ func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 

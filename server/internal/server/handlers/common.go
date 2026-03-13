@@ -10,11 +10,6 @@ import (
 	"github.com/kp-cms/server/internal/store"
 )
 
-type loginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
 type StoreAccessor struct {
 	stores  map[string]store.Store
 	storeMu *sync.RWMutex

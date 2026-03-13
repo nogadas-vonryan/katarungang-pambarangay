@@ -23,10 +23,8 @@ func NewRecordHandler(stores *StoreAccessor) *RecordHandler {
 }
 
 func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -96,9 +94,8 @@ func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
 
 func (h *RecordHandler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -119,10 +116,8 @@ func (h *RecordHandler) CreateRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecordHandler) GetRecord(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -138,10 +133,8 @@ func (h *RecordHandler) GetRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -173,10 +166,8 @@ func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
@@ -208,10 +199,8 @@ func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RecordHandler) DeleteRecord(w http.ResponseWriter, r *http.Request) {
-	storeName := chi.URLParam(r, "store")
-	st, ok := h.GetStore(storeName)
+	st, ok := h.GetStoreOrError(w, r)
 	if !ok {
-		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 		return
 	}
 
