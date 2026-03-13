@@ -662,6 +662,10 @@ func (s *CSVStore) DeleteFile(ctx context.Context, recordID string, name string)
 	return fmt.Errorf("files not supported in CSV store")
 }
 
+func (s *CSVStore) RenameFile(ctx context.Context, recordID, oldName, newName string) error {
+	return fmt.Errorf("files not supported in CSV store")
+}
+
 func (s *CSVStore) Watch(ctx context.Context, ch chan<- store.StoreEvent) error {
 	_ = ctx
 	_ = ch

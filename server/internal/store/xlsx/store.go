@@ -622,6 +622,10 @@ func (s *XLSXStore) DeleteFile(ctx context.Context, recordID string, name string
 	return fmt.Errorf("files not supported in XLSX store")
 }
 
+func (s *XLSXStore) RenameFile(ctx context.Context, recordID, oldName, newName string) error {
+	return fmt.Errorf("files not supported in XLSX store")
+}
+
 func (s *XLSXStore) Watch(ctx context.Context, ch chan<- store.StoreEvent) error {
 	_ = ctx
 	_ = ch

@@ -496,6 +496,10 @@ func (s *JSONStore) DeleteFile(ctx context.Context, recordID string, name string
 	return fmt.Errorf("files not supported in JSON store")
 }
 
+func (s *JSONStore) RenameFile(ctx context.Context, recordID, oldName, newName string) error {
+	return fmt.Errorf("files not supported in JSON store")
+}
+
 func (s *JSONStore) Watch(ctx context.Context, ch chan<- store.StoreEvent) error {
 	_ = ctx
 	_ = ch
