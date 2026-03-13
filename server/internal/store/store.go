@@ -13,6 +13,8 @@ var (
 	ErrRecordExists     = errors.New("record already exists")
 	ErrInvalidID        = errors.New("invalid record ID")
 	ErrIDNotAllowed     = errors.New("auto ID generation not allowed for this store")
+	ErrFileNotFound     = errors.New("file not found")
+	ErrFileExists       = errors.New("file already exists")
 )
 
 type Record struct {
@@ -66,6 +68,7 @@ type Store interface {
 	UploadFile(ctx context.Context, recordID string, name string, data []byte) error
 	DownloadFile(ctx context.Context, recordID string, name string) ([]byte, error)
 	DeleteFile(ctx context.Context, recordID string, name string) error
+	RenameFile(ctx context.Context, recordID, oldName, newName string) error
 
 	Watch(ctx context.Context, ch chan<- StoreEvent) error
 	Close() error

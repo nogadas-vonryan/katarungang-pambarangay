@@ -203,6 +203,7 @@ func (s *Server) setupRouter() {
 					r.Post("/", s.fileHandler.UploadFile)
 					r.Get("/{filename}", s.fileHandler.DownloadFile)
 					r.Delete("/{filename}", s.fileHandler.DeleteFile)
+					r.Patch("/{filename}", s.fileHandler.RenameFile)
 				})
 			})
 		})

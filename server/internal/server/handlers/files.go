@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kp-cms/server/internal/sanitize"
+	"github.com/kp-cms/server/internal/store"
 )
 
 type FileHandler struct {
@@ -130,4 +131,56 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *FileHandler) RenameFile(w http.ResponseWriter, r *http.Request) {
+	st, ok := h.GetStoreOrError(w, r)
+	if !ok {
+		return
+	}
+
+	recordID := chi.URLParam(r, "id")
+	filename := chi.URLParam(r, "filename")
+
+	if !sanitize.FileName(filename) {
+		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "invalid filename")
+		return
+	}
+
+	var req struct {
+		Name string `json:"name"`
+	}
+	if err := decodeJSON(w, r, &req); err != nil {
+		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, ErrMsgInvalidJSON)
+		return
+	}
+
+	if req.Name == "" {
+		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "name is required")
+		return
+	}
+
+	if !sanitize.FileName(req.Name) {
+		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, "invalid new filename")
+		return
+	}
+
+	if err := st.RenameFile(r.Context(), recordID, filename, req.Name); err != nil {
+		if errors.Is(err, store.ErrFileNotFound) {
+			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, "file not found")
+			return
+		}
+		if errors.Is(err, store.ErrFileExists) {
+			WriteError(w, r, http.StatusConflict, ErrCodeConflict, "file with new name already exists")
+			return
+		}
+		WriteError(w, r, http.StatusInternalServerError, ErrCodeInternal, err.Error())
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message": "file renamed",
+		"oldName": filename,
+		"newName": req.Name,
+	})
 }

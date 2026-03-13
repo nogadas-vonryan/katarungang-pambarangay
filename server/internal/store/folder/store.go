@@ -593,6 +593,42 @@ func (s *FolderStore) DeleteFile(ctx context.Context, recordID, name string) err
 	return nil
 }
 
+func (s *FolderStore) RenameFile(ctx context.Context, recordID, oldName, newName string) error {
+	if oldName == newName {
+		return nil
+	}
+
+	if !s.isValidPath(oldName) {
+		return fmt.Errorf("invalid old file path")
+	}
+	if !s.isValidPath(newName) {
+		return fmt.Errorf("invalid new file path")
+	}
+
+	unlock := s.locker.Lock(recordID)
+	defer unlock()
+
+	recordPath := s.recordPath(recordID)
+	filesDir := filepath.Join(recordPath, FilesDirName)
+
+	oldPath := filepath.Join(filesDir, oldName)
+	newPath := filepath.Join(filesDir, newName)
+
+	if _, err := os.Stat(oldPath); os.IsNotExist(err) {
+		return store.ErrFileNotFound
+	}
+
+	if _, err := os.Stat(newPath); err == nil {
+		return store.ErrFileExists
+	}
+
+	if err := os.Rename(oldPath, newPath); err != nil {
+		return fmt.Errorf("rename file: %w", err)
+	}
+
+	return nil
+}
+
 func (s *FolderStore) ListRecordFiles(ctx context.Context, recordID string) ([]store.FileInfo, error) {
 	return s.ListFiles(ctx, recordID)
 }
