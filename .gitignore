@@ -1,3 +1,54 @@
-data
-.gitignore
-node_modules
+# --- Project data / local env ---
+data/
+.env
+.env.*
+!.env.example
+
+# --- Node / Vue / Wails frontend ---
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Wails-generated bundles / temporary outputs
+wailsjs/
+frontend/wailsjs/
+
+# --- Go ---
+bin/
+**/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+
+# Go workspace / tool caches
+.coverprofile
+
+# --- Logs / temp files ---
+*.log
+tmp/
+temp/
+.tmp/
+
+# --- Editor / OS ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
