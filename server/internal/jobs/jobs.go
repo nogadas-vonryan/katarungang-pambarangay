@@ -58,6 +58,7 @@ type JobManagerConfig struct {
 	MaxJobs       int
 	JobTTL        time.Duration
 	CleanupPeriod time.Duration
+	QueueSize     int
 }
 
 func New(cfg JobManagerConfig) *JobManager {
@@ -73,9 +74,12 @@ func New(cfg JobManagerConfig) *JobManager {
 	if cfg.CleanupPeriod == 0 {
 		cfg.CleanupPeriod = 1 * time.Hour
 	}
+	if cfg.QueueSize == 0 {
+		cfg.QueueSize = 100
+	}
 	return &JobManager{
 		jobs:          make(map[string]*Job),
-		queue:         make(chan *Job, 100),
+		queue:         make(chan *Job, cfg.QueueSize),
 		handlers:      make(map[JobType]JobHandler),
 		logger:        cfg.Logger,
 		workers:       cfg.Workers,

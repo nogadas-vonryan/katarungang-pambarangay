@@ -11,12 +11,19 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
 	"github.com/kp-cms/server/internal/store"
 )
+
+var defaultLogger = slog.Default()
+
+func SetDefaultLogger(logger *slog.Logger) {
+	if logger != nil {
+		defaultLogger = logger
+	}
+}
 
 const (
 	StoreMetaFileName  = ".store.json"
@@ -71,7 +78,7 @@ func New(path string, metadata *store.StoreMetadata) (store.Store, error) {
 		path:     absPath,
 		metadata: metadata,
 		locker:   store.NewRecordLocker(5 * time.Minute),
-		logger:   slog.Default(),
+		logger:   defaultLogger,
 	}
 
 	if err := fs.loadStoreMeta(); err != nil {
@@ -272,36 +279,7 @@ func (s *FolderStore) List(ctx context.Context, opts store.ListOptions) ([]store
 		})
 	}
 
-	if opts.SortBy != "" {
-		slices.SortFunc(records, func(a, b store.Record) int {
-			var aVal, bVal interface{}
-			switch opts.SortBy {
-			case "id":
-				aVal, bVal = a.ID, b.ID
-			case "uuid":
-				aVal, bVal = a.UUID, b.UUID
-			case "createdAt":
-				aVal, bVal = a.CreatedAt, b.CreatedAt
-			case "updatedAt":
-				aVal, bVal = a.UpdatedAt, b.UpdatedAt
-			default:
-				aVal, bVal = a.Data[opts.SortBy], b.Data[opts.SortBy]
-			}
-			if opts.SortDesc {
-				aVal, bVal = bVal, aVal
-			}
-			if aVal == bVal {
-				return 0
-			}
-			if aVal == nil {
-				return -1
-			}
-			if bVal == nil {
-				return 1
-			}
-			return strings.Compare(fmt.Sprint(aVal), fmt.Sprint(bVal))
-		})
-	}
+	store.SortRecords(records, opts.SortBy, opts.SortDesc)
 
 	if opts.Limit > 0 && opts.Offset >= 0 {
 		end := opts.Offset + opts.Limit

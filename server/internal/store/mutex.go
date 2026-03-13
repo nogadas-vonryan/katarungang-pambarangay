@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -23,6 +24,10 @@ type RecordLocker struct {
 }
 
 func NewRecordLocker(ttl time.Duration) *RecordLocker {
+	return NewRecordLockerWithContext(context.Background(), ttl)
+}
+
+func NewRecordLockerWithContext(ctx context.Context, ttl time.Duration) *RecordLocker {
 	l := &RecordLocker{
 		locks:  make(map[string]*sync.RWMutex),
 		refCnt: make(map[string]int),
@@ -30,11 +35,11 @@ func NewRecordLocker(ttl time.Duration) *RecordLocker {
 		stopCh: make(chan struct{}),
 		doneCh: make(chan struct{}),
 	}
-	go l.cleanupLoop()
+	go l.cleanupLoop(ctx)
 	return l
 }
 
-func (l *RecordLocker) cleanupLoop() {
+func (l *RecordLocker) cleanupLoop(ctx context.Context) {
 	defer close(l.doneCh)
 	ticker := time.NewTicker(l.ttl)
 	defer ticker.Stop()
@@ -43,6 +48,8 @@ func (l *RecordLocker) cleanupLoop() {
 		case <-ticker.C:
 			l.removeStale()
 		case <-l.stopCh:
+			return
+		case <-ctx.Done():
 			return
 		}
 	}
