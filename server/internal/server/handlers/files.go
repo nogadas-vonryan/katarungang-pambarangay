@@ -11,8 +11,6 @@ import (
 	"github.com/kp-cms/server/internal/sanitize"
 )
 
-const maxFileSize = 10 * 1024 * 1024
-
 type FileHandler struct {
 	BaseHandler
 }
@@ -71,7 +69,7 @@ func (h *FileHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limitedReader := http.MaxBytesReader(w, file, maxFileSize)
+	limitedReader := http.MaxBytesReader(w, file, MaxFileSize)
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
 		var maxBytesError *http.MaxBytesError

@@ -11,8 +11,6 @@ import (
 	"github.com/kp-cms/server/internal/server/handlers"
 )
 
-const maxBodySize = 1 << 20
-
 func (s *Server) accessLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -83,7 +81,7 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 func (s *Server) bodyLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
-			r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+			r.Body = http.MaxBytesReader(w, r.Body, MaxBodySize)
 		}
 		next.ServeHTTP(w, r)
 	})

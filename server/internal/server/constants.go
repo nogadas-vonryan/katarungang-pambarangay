@@ -12,4 +12,5 @@ const (
 	DefaultIdleTimeout     = 120 * time.Second
 	DefaultShutdownTimeout = 30 * time.Second
 	DefaultListLimit       = 100
+	MaxBodySize            = 1 << 20
 )

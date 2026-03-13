@@ -29,7 +29,7 @@ func (h *RecordHandler) ListRecords(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := store.ListOptions{
-		Limit:    100,
+		Limit:    DefaultListLimit,
 		Offset:   0,
 		SortBy:   "id",
 		SortDesc: false,
