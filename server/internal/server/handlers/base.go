@@ -46,3 +46,16 @@ func (h *BaseHandler) ValidateETag(ctx context.Context, st store.Store, id strin
 func (h *BaseHandler) ValidateETagFromRequest(r *http.Request, st store.Store, id string) (*store.Record, bool, error) {
 	return h.ValidateETag(r.Context(), st, id, r.Header.Get("If-Match"))
 }
+
+func (h *BaseHandler) ValidateETagOrError(w http.ResponseWriter, r *http.Request, st store.Store, id string) (*store.Record, bool) {
+	existing, valid, err := h.ValidateETagFromRequest(r, st, id)
+	if err != nil {
+		WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgRecordNotFound)
+		return nil, false
+	}
+	if !valid {
+		WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
+		return nil, false
+	}
+	return existing, true
+}

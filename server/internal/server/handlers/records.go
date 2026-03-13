@@ -140,12 +140,7 @@ func (h *RecordHandler) ReplaceRecord(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if _, valid, err := h.ValidateETagFromRequest(r, st, id); err != nil || !valid {
-		if err != nil {
-			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgRecordNotFound)
-			return
-		}
-		WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
+	if _, ok := h.ValidateETagOrError(w, r, st, id); !ok {
 		return
 	}
 
@@ -173,12 +168,7 @@ func (h *RecordHandler) UpdateRecord(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	if _, valid, err := h.ValidateETagFromRequest(r, st, id); err != nil || !valid {
-		if err != nil {
-			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgRecordNotFound)
-			return
-		}
-		WriteError(w, r, http.StatusPreconditionFailed, ErrCodePreconditionFailed, "ETag mismatch")
+	if _, ok := h.ValidateETagOrError(w, r, st, id); !ok {
 		return
 	}
 
