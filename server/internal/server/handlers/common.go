@@ -39,27 +39,6 @@ func (p *StoreAccessor) All() map[string]store.Store {
 	return result
 }
 
-func (p *StoreAccessor) Lock() {
-	p.storeMu.Lock()
-}
-
-func (p *StoreAccessor) Unlock() {
-	p.storeMu.Unlock()
-}
-
-func (p *StoreAccessor) Exists(name string) bool {
-	p.storeMu.RLock()
-	defer p.storeMu.RUnlock()
-	_, ok := p.stores[name]
-	return ok
-}
-
-func (p *StoreAccessor) Set(name string, st store.Store) {
-	p.storeMu.Lock()
-	p.stores[name] = st
-	p.storeMu.Unlock()
-}
-
 func (p *StoreAccessor) CreateIfNotExists(name string, fn func() (store.Store, error)) (store.Store, error) {
 	p.storeMu.Lock()
 	defer p.storeMu.Unlock()
