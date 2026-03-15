@@ -82,11 +82,14 @@ func (m *BackupManager) CreateBackup(ctx context.Context, scope string, storePat
 
 	pathsToBackup := make(map[string]string)
 	var storeType string
+	if scope != "all" {
+		for _, info := range targetStores {
+			storeType = info.Type
+			break
+		}
+	}
 	for name, info := range targetStores {
 		pathsToBackup[name] = info.Path
-		if storeType == "" {
-			storeType = info.Type
-		}
 	}
 
 	manifest := NewManifest(scope, scopeType, storeType)
