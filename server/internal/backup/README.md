@@ -40,11 +40,11 @@ meta, err := mgr.GetBackup("cases-2026-03-15.zip")
 
 // Restore backup (dry-run)
 dryRun, err := mgr.RestoreBackup(ctx, "cases-2026-03-15.zip", "cases", 
-    backup.RestoreOptions{Mode: "overwrite", DryRun: true})
+    backup.RestoreOptions{DryRun: true})
 
 // Restore backup (actual)
 result, err := mgr.RestoreBackup(ctx, "cases-2026-03-15.zip", "cases", 
-    backup.RestoreOptions{Mode: "overwrite", DryRun: false})
+    backup.RestoreOptions{DryRun: false})
 
 // Delete backup
 err = mgr.Delete("cases-2026-03-15.zip")

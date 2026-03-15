@@ -13,7 +13,6 @@ type BackupMeta struct {
 }
 
 type RestoreOptions struct {
-	Mode   string
 	DryRun bool
 	Force  bool
 }
