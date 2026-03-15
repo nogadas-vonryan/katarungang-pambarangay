@@ -26,6 +26,9 @@ func ReadManifest(rc io.ReadCloser) (*Manifest, error) {
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, ErrInvalidManifest
 	}
+	if m.Scope == "" || m.Version == 0 {
+		return nil, ErrInvalidManifest
+	}
 	return &m, nil
 }
 

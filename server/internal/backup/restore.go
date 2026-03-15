@@ -30,6 +30,10 @@ func (m *BackupManager) RestoreBackup(ctx context.Context, backupName, targetSto
 		targetPath = m.dataDir
 	}
 
+	if info, err := os.Stat(targetPath); err == nil && !info.IsDir() {
+		return nil, fmt.Errorf("target path is not a directory: %s", targetPath)
+	}
+
 	lockKey := targetStore
 	if meta.Scope == "all" {
 		lockKey = "all"
@@ -182,7 +186,7 @@ func (m *BackupManager) createRollback(ctx context.Context, targetPath, rollback
 			return os.MkdirAll(destPath, info.Mode())
 		}
 
-		return copyFile(path, destPath)
+		return copyFile(ctx, path, destPath)
 	})
 }
 
@@ -239,11 +243,14 @@ func (m *BackupManager) executeRestore(ctx context.Context, extractDir, targetPa
 			return os.MkdirAll(destPath, info.Mode())
 		}
 
-		return copyFile(path, destPath)
+		return copyFile(ctx, path, destPath)
 	})
 }
 
-func copyFile(src, dst string) error {
+func copyFile(ctx context.Context, src, dst string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	sf, err := os.Open(src)
 	if err != nil {
 		return err
