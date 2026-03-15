@@ -134,9 +134,9 @@ func (a *Archiver) addStoreToZip(ctx context.Context, zw *zip.Writer, storeName,
 		if err != nil {
 			return err
 		}
-		defer file.Close()
 
 		n, err := io.Copy(w, file)
+		file.Close()
 		if err != nil {
 			return err
 		}
@@ -182,7 +182,9 @@ func (a *Archiver) Extract(ctx context.Context, zipPath, destDir string) error {
 
 		destPath := filepath.Join(destDir, f.Name)
 
-		if !strings.HasPrefix(filepath.Clean(destPath), filepath.Clean(destDir)+string(os.PathSeparator)) {
+		cleanDestPath := filepath.Clean(destPath)
+		cleanDestDir := filepath.Clean(destDir)
+		if cleanDestPath != cleanDestDir && !strings.HasPrefix(cleanDestPath, cleanDestDir+string(filepath.Separator)) {
 			return fmt.Errorf("invalid path in archive: %s", f.Name)
 		}
 

@@ -41,7 +41,13 @@ func (im *IndexManager) save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(im.path, data, 0644)
+
+	tmpPath := im.path + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return err
+	}
+
+	return os.Rename(tmpPath, im.path)
 }
 
 func (im *IndexManager) List() []BackupMeta {
@@ -52,32 +58,61 @@ func (im *IndexManager) List() []BackupMeta {
 	return result
 }
 
-func (im *IndexManager) Get(name string) (*BackupMeta, bool) {
+func (im *IndexManager) Get(name string) (BackupMeta, bool) {
 	im.mu.RLock()
 	defer im.mu.RUnlock()
 	for i := range im.index.Backups {
 		if im.index.Backups[i].Name == name {
-			return &im.index.Backups[i], true
+			return im.index.Backups[i], true
 		}
 	}
-	return nil, false
+	return BackupMeta{}, false
 }
 
 func (im *IndexManager) Add(meta BackupMeta) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
-	im.index.Backups = append(im.index.Backups, meta)
-	return im.save()
+
+	newBackups := make([]BackupMeta, len(im.index.Backups)+1)
+	copy(newBackups, im.index.Backups)
+	newBackups[len(newBackups)-1] = meta
+
+	oldIndex := im.index
+	im.index = &Index{Backups: newBackups}
+
+	if err := im.save(); err != nil {
+		im.index = oldIndex
+		return err
+	}
+	return nil
 }
 
 func (im *IndexManager) Remove(name string) error {
 	im.mu.Lock()
 	defer im.mu.Unlock()
+
+	var foundIndex int = -1
 	for i := range im.index.Backups {
 		if im.index.Backups[i].Name == name {
-			im.index.Backups = append(im.index.Backups[:i], im.index.Backups[i+1:]...)
-			return im.save()
+			foundIndex = i
+			break
 		}
 	}
-	return ErrBackupNotFound
+
+	if foundIndex == -1 {
+		return ErrBackupNotFound
+	}
+
+	newBackups := make([]BackupMeta, len(im.index.Backups)-1)
+	copy(newBackups[:foundIndex], im.index.Backups[:foundIndex])
+	copy(newBackups[foundIndex:], im.index.Backups[foundIndex+1:])
+
+	oldIndex := im.index
+	im.index = &Index{Backups: newBackups}
+
+	if err := im.save(); err != nil {
+		im.index = oldIndex
+		return err
+	}
+	return nil
 }

@@ -136,7 +136,7 @@ func (m *BackupManager) GetBackup(name string) (*BackupMeta, error) {
 	if !ok {
 		return nil, ErrBackupNotFound
 	}
-	return meta, nil
+	return &meta, nil
 }
 
 func (m *BackupManager) Delete(name string) error {
