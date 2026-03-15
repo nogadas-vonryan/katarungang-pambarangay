@@ -73,17 +73,20 @@ func (a *Archiver) Create(ctx context.Context, name string, storePaths map[strin
 func (a *Archiver) addFileToZip(zw *zip.Writer, zipPath, srcPath string) error {
 	w, err := zw.Create(zipPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("create zip entry %q: %w", zipPath, err)
 	}
 
 	f, err := os.Open(srcPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("open source file %q: %w", srcPath, err)
 	}
 	defer f.Close()
 
 	_, err = io.Copy(w, f)
-	return err
+	if err != nil {
+		return fmt.Errorf("copy to zip %q: %w", zipPath, err)
+	}
+	return nil
 }
 
 func (a *Archiver) addStoreToZip(ctx context.Context, zw *zip.Writer, storeName, storePath string, exclusions []string) (int, int64, error) {
