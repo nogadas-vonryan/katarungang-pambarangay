@@ -12,4 +12,5 @@ var (
 	ErrRestoreFailed     = errors.New("restore operation failed")
 	ErrBackupInProgress  = errors.New("backup already in progress for this scope")
 	ErrRestoreInProgress = errors.New("restore already in progress for this store")
+	ErrInsufficientSpace = errors.New("insufficient disk space for backup")
 )

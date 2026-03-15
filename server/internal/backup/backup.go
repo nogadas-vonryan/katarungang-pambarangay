@@ -91,6 +91,10 @@ func (m *BackupManager) CreateBackup(ctx context.Context, scope string, storePat
 
 	manifest := NewManifest(scope, scopeType, storeType)
 
+	if err := checkDiskSpace(m.backupDir, pathsToBackup); err != nil {
+		return nil, err
+	}
+
 	zipPath, bytesWritten, recordCount, err := m.archiver.Create(ctx, backupName, pathsToBackup, manifest, FullBackupExclusions)
 	if err != nil {
 		return nil, err
