@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kp-cms/server/internal/auth"
+	"github.com/kp-cms/server/internal/backup"
 	"github.com/kp-cms/server/internal/config"
 	"github.com/kp-cms/server/internal/jobs"
 	"github.com/kp-cms/server/internal/logging"
@@ -19,22 +20,24 @@ import (
 )
 
 type Server struct {
-	cfg      *config.Config
-	logger   *logging.Logger
-	router   *chi.Mux
-	httpSrv  *http.Server
-	stores   map[string]store.Store
-	storeMu  sync.RWMutex
-	provider *handlers.StoreAccessor
-	stopCh   chan struct{}
-	authSvc  *auth.AuthService
-	jobsMgr  *jobs.JobManager
-	setupSvc *setup.SetupService
+	cfg       *config.Config
+	logger    *logging.Logger
+	router    *chi.Mux
+	httpSrv   *http.Server
+	stores    map[string]store.Store
+	storeMu   sync.RWMutex
+	provider  *handlers.StoreAccessor
+	stopCh    chan struct{}
+	authSvc   *auth.AuthService
+	jobsMgr   *jobs.JobManager
+	setupSvc  *setup.SetupService
+	backupMgr *backup.BackupManager
 
 	storeHandler  *handlers.StoreHandler
 	recordHandler *handlers.RecordHandler
 	jobHandler    *handlers.JobHandler
 	fileHandler   *handlers.FileHandler
+	backupHandler *handlers.BackupHandler
 }
 
 func New(cfg *config.Config, logger *logging.Logger) (*Server, error) {
@@ -61,6 +64,10 @@ func New(cfg *config.Config, logger *logging.Logger) (*Server, error) {
 
 	if err := s.initStores(); err != nil {
 		return nil, fmt.Errorf("init stores: %w", err)
+	}
+
+	if err := s.initBackup(); err != nil {
+		return nil, fmt.Errorf("init backup: %w", err)
 	}
 
 	s.initHandlers()
@@ -136,4 +143,5 @@ func (s *Server) initHandlers() {
 	s.recordHandler = handlers.NewRecordHandler(s.provider)
 	s.jobHandler = handlers.NewJobHandler(s.jobsMgr)
 	s.fileHandler = handlers.NewFileHandler(s.provider)
+	s.backupHandler = handlers.NewBackupHandler(s.backupMgr, s.jobsMgr, s.provider)
 }

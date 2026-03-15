@@ -12,8 +12,10 @@ import (
 type JobType string
 
 const (
-	JobStoreScan    JobType = "store_scan"
-	JobIndexRebuild JobType = "index_rebuild"
+	JobStoreScan     JobType = "store_scan"
+	JobIndexRebuild  JobType = "index_rebuild"
+	JobBackupCreate  JobType = "backup_create"
+	JobBackupRestore JobType = "backup_restore"
 )
 
 type JobStatus string

@@ -104,6 +104,10 @@ const (
 	ErrCodeInternal           = "INTERNAL_ERROR"
 	ErrCodeInvalidCredentials = "INVALID_CREDENTIALS"
 	ErrCodeForbidden          = "FORBIDDEN"
+	ErrCodeBackupNotFound     = "BACKUP_NOT_FOUND"
+	ErrCodeBackupCorrupted    = "BACKUP_CORRUPTED"
+	ErrCodeScopeMismatch      = "SCOPE_MISMATCH"
+	ErrCodeStoreLocked        = "STORE_LOCKED"
 )
 
 const (
@@ -123,4 +127,8 @@ const (
 	ErrMsgJobNotFound      = "job not found"
 	ErrMsgInvalidStoreName = "invalid store name"
 	ErrMsgPathTraversal    = "invalid store name: path traversal detected"
+	ErrMsgBackupNotFound   = "backup not found"
+	ErrMsgBackupCorrupted  = "backup archive is corrupted"
+	ErrMsgScopeMismatch    = "backup scope does not match target store"
+	ErrMsgStoreLocked      = "store is locked by another operation"
 )

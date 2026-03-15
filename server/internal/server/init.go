@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kp-cms/server/internal/auth"
+	"github.com/kp-cms/server/internal/backup"
 	"github.com/kp-cms/server/internal/config"
 	"github.com/kp-cms/server/internal/jobs"
 	"github.com/kp-cms/server/internal/logging"
@@ -67,6 +68,74 @@ func (s *Server) initJobs() error {
 
 		job.Result = map[string]interface{}{
 			"storesReloaded": len(s.stores),
+		}
+		return nil
+	})
+
+	s.jobsMgr.RegisterHandler(jobs.JobBackupCreate, func(ctx context.Context, job *jobs.Job) error {
+		s.logger.Jobs().Info("job: creating backup", "job", job.ID)
+
+		scope, _ := job.Payload["scope"].(string)
+		createdBy, _ := job.Payload["createdBy"].(string)
+
+		storePathsRaw, ok := job.Payload["storePaths"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid storePaths payload")
+		}
+
+		storePaths := make(map[string]backup.StoreInfo, len(storePathsRaw))
+		for name, v := range storePathsRaw {
+			infoMap, ok := v.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			storePaths[name] = backup.StoreInfo{
+				Name: getString(infoMap, "name"),
+				Path: getString(infoMap, "path"),
+				Type: getString(infoMap, "type"),
+			}
+		}
+
+		result, err := s.backupMgr.CreateBackup(ctx, scope, storePaths, createdBy)
+		if err != nil {
+			return fmt.Errorf("create backup: %w", err)
+		}
+
+		job.Result = map[string]interface{}{
+			"backupName":     result.BackupName,
+			"filesProcessed": result.FilesProcessed,
+			"recordCount":    result.RecordCount,
+			"bytesWritten":   result.BytesWritten,
+		}
+		return nil
+	})
+
+	s.jobsMgr.RegisterHandler(jobs.JobBackupRestore, func(ctx context.Context, job *jobs.Job) error {
+		s.logger.Jobs().Info("job: restoring backup", "job", job.ID)
+
+		backupName, _ := job.Payload["backupName"].(string)
+		targetStore, _ := job.Payload["targetStore"].(string)
+
+		optsMap, ok := job.Payload["opts"].(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid opts payload")
+		}
+
+		opts := backup.RestoreOptions{
+			DryRun: getBool(optsMap, "dryRun"),
+			Force:  getBool(optsMap, "force"),
+		}
+
+		result, err := s.backupMgr.RestoreBackup(ctx, backupName, targetStore, opts)
+		if err != nil {
+			return fmt.Errorf("restore backup: %w", err)
+		}
+
+		job.Result = map[string]interface{}{
+			"recordCount": result.RecordCount,
+			"wouldDelete": result.WouldDelete,
+			"wouldCreate": result.WouldCreate,
+			"wouldUpdate": result.WouldUpdate,
 		}
 		return nil
 	})
@@ -189,6 +258,12 @@ func (s *Server) setupRouter() {
 			r.Post("/reload", s.storeHandler.ReloadStores)
 		})
 
+		r.Route("/backups", func(r chi.Router) {
+			r.Get("/", s.backupHandler.ListBackups)
+			r.Post("/", s.backupHandler.CreateBackup)
+			r.Post("/{name}/restore", s.backupHandler.RestoreBackup)
+		})
+
 		r.Route("/{store}", func(r chi.Router) {
 			r.Route("/records", func(r chi.Router) {
 				r.Get("/", s.recordHandler.ListRecords)
@@ -265,4 +340,28 @@ func Run(cfg *config.Config) error {
 
 	logger.App().Info("server stopped")
 	return nil
+}
+
+func (s *Server) initBackup() error {
+	mgr, err := backup.NewBackupManager(s.cfg.DataDir, s.logger.Default())
+	if err != nil {
+		return fmt.Errorf("create backup manager: %w", err)
+	}
+	s.backupMgr = mgr
+	s.logger.App().Info("backup manager initialized")
+	return nil
+}
+
+func getString(m map[string]interface{}, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func getBool(m map[string]interface{}, key string) bool {
+	if v, ok := m[key].(bool); ok {
+		return v
+	}
+	return false
 }
