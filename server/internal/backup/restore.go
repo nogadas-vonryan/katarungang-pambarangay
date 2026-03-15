@@ -68,6 +68,10 @@ func (m *BackupManager) RestoreBackup(ctx context.Context, backupName, targetSto
 		"backup", backupName,
 		"target", targetStore)
 
+	if err := os.RemoveAll(rollbackDir); err != nil {
+		m.logger.Warn("failed to clean up rollback dir", "err", err)
+	}
+
 	return &DryRunResult{
 		RecordCount: meta.RecordCount,
 		StoreType:   manifest.StoreType,

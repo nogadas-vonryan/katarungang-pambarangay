@@ -29,6 +29,9 @@ func NewBackupManager(dataDir string, logger *slog.Logger) (*BackupManager, erro
 		return nil, fmt.Errorf("create backup directory: %w", err)
 	}
 
+	// Clean up any stale staging dirs from previous crashes
+	os.RemoveAll(filepath.Join(backupDir, ".staging"))
+
 	index, err := NewIndexManager(backupDir)
 	if err != nil {
 		return nil, fmt.Errorf("init index: %w", err)
