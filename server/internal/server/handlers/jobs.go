@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -36,4 +38,28 @@ func (h *JobHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	WriteJSON(w, http.StatusOK, jobs.JobToResponse(job))
+}
+
+func (h *JobHandler) CancelJob(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if err := h.jobsMgr.Cancel(id); err != nil {
+		switch {
+		case errors.Is(err, jobs.ErrJobNotFound):
+			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgJobNotFound)
+			return
+		case errors.Is(err, jobs.ErrJobNotCancelable):
+			WriteError(w, r, http.StatusConflict, ErrCodeConflict, "job is not cancellable")
+			return
+		default:
+			WriteError(w, r, http.StatusInternalServerError, ErrCodeInternal, "failed to cancel job")
+			return
+		}
+	}
+
+	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
+		"jobId":     id,
+		"statusUrl": fmt.Sprintf("/v1/jobs/%s", id),
+		"message":   "job cancellation requested",
+	})
 }

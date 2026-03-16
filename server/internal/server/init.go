@@ -236,13 +236,14 @@ func (s *Server) setupRouter() {
 		r.Post("/complete", s.handleSetupComplete)
 	})
 
-	s.router.Route("/jobs", func(r chi.Router) {
-		r.Get("/", s.jobHandler.ListJobs)
-		r.Get("/{id}", s.jobHandler.GetJob)
-	})
-
 	s.router.Route("/v1", func(r chi.Router) {
 		r.Use(s.authMiddleware)
+
+		r.Route("/jobs", func(r chi.Router) {
+			r.Get("/", s.jobHandler.ListJobs)
+			r.Get("/{id}", s.jobHandler.GetJob)
+			r.Post("/{id}/cancel", s.jobHandler.CancelJob)
+		})
 
 		r.Route("/stores", func(r chi.Router) {
 			r.Get("/", s.storeHandler.ListStores)

@@ -26,12 +26,19 @@ const (
 	JobStatusRunning   JobStatus = "running"
 	JobStatusCompleted JobStatus = "completed"
 	JobStatusFailed    JobStatus = "failed"
+	JobStatusCancelled JobStatus = "cancelled"
+)
+
+var (
+	ErrJobNotFound      = errors.New("job not found")
+	ErrJobNotCancelable = errors.New("job is not cancellable")
 )
 
 type Job struct {
 	ID          string                 `json:"id"`
 	Type        JobType                `json:"type"`
 	Status      JobStatus              `json:"status"`
+	CancelRequested bool               `json:"cancelRequested,omitempty"`
 	Payload     map[string]interface{} `json:"payload,omitempty"`
 	Result      map[string]interface{} `json:"result,omitempty"`
 	Error       string                 `json:"error,omitempty"`
@@ -67,6 +74,7 @@ type JobManager struct {
 	mu            sync.RWMutex
 	jobs          map[string]*Job
 	queue         chan *Job
+	jobCancels    map[string]context.CancelFunc
 	handlers      map[JobType]JobHandler
 	logger        *slog.Logger
 	workers       int
@@ -104,6 +112,7 @@ func New(cfg JobManagerConfig) *JobManager {
 	return &JobManager{
 		jobs:          make(map[string]*Job),
 		queue:         make(chan *Job, cfg.QueueSize),
+		jobCancels:    make(map[string]context.CancelFunc),
 		handlers:      make(map[JobType]JobHandler),
 		logger:        cfg.Logger,
 		workers:       cfg.Workers,
@@ -148,13 +157,33 @@ func (m *JobManager) worker(ctx context.Context, id int) {
 }
 
 func (m *JobManager) runJob(ctx context.Context, job *Job) {
+	m.mu.Lock()
+	if job.Status == JobStatusCancelled {
+		if job.CompletedAt == nil {
+			completed := time.Now()
+			job.CompletedAt = &completed
+		}
+		m.jobs[job.ID] = job
+		m.mu.Unlock()
+		m.logger.Info("job skipped (already cancelled)", "id", job.ID, "type", job.Type)
+		return
+	}
+
 	now := time.Now()
 	job.Status = JobStatusRunning
+	job.CancelRequested = false
 	job.StartedAt = &now
-
-	m.mu.Lock()
+	jobCtx, cancel := context.WithCancel(ctx)
+	m.jobCancels[job.ID] = cancel
 	m.jobs[job.ID] = job
 	m.mu.Unlock()
+
+	defer func() {
+		cancel()
+		m.mu.Lock()
+		delete(m.jobCancels, job.ID)
+		m.mu.Unlock()
+	}()
 
 	m.logger.Info("job started", "id", job.ID, "type", job.Type)
 
@@ -162,26 +191,88 @@ func (m *JobManager) runJob(ctx context.Context, job *Job) {
 	handler, ok := m.handlers[job.Type]
 	m.mu.RUnlock()
 
+	finalStatus := job.Status
+	finalError := job.Error
+	finalCancelRequested := job.CancelRequested
+
 	if !ok {
-		job.Status = JobStatusFailed
-		job.Error = fmt.Sprintf("no handler for job type %s", job.Type)
+		finalStatus = JobStatusFailed
+		finalCancelRequested = false
+		finalError = fmt.Sprintf("no handler for job type %s", job.Type)
 	} else {
-		if err := handler(ctx, job); err != nil {
-			job.Status = JobStatusFailed
-			job.Error = err.Error()
-			m.logger.Error("job failed", "id", job.ID, "err", err)
+		if err := handler(jobCtx, job); err != nil {
+			if errors.Is(err, context.Canceled) {
+				finalStatus = JobStatusCancelled
+				finalCancelRequested = false
+				finalError = "job cancelled"
+				m.logger.Info("job cancelled", "id", job.ID)
+			} else {
+				finalStatus = JobStatusFailed
+				finalCancelRequested = false
+				finalError = err.Error()
+				m.logger.Error("job failed", "id", job.ID, "err", err)
+			}
 		} else {
-			job.Status = JobStatusCompleted
-			m.logger.Info("job completed", "id", job.ID)
+			m.mu.RLock()
+			cancelRequested := job.CancelRequested
+			m.mu.RUnlock()
+
+			if cancelRequested {
+				finalStatus = JobStatusCancelled
+				finalCancelRequested = false
+				finalError = "job cancelled"
+				m.logger.Info("job cancelled", "id", job.ID)
+			} else {
+				finalStatus = JobStatusCompleted
+				finalCancelRequested = false
+				finalError = ""
+				m.logger.Info("job completed", "id", job.ID)
+			}
 		}
 	}
 
 	completed := time.Now()
-	job.CompletedAt = &completed
 
 	m.mu.Lock()
+	job.Status = finalStatus
+	job.CancelRequested = finalCancelRequested
+	job.Error = finalError
+	job.CompletedAt = &completed
 	m.jobs[job.ID] = job
 	m.mu.Unlock()
+}
+
+func (m *JobManager) Cancel(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	job, ok := m.jobs[id]
+	if !ok {
+		return ErrJobNotFound
+	}
+
+	switch job.Status {
+	case JobStatusCompleted, JobStatusFailed, JobStatusCancelled:
+		return ErrJobNotCancelable
+	case JobStatusQueued:
+		job.Status = JobStatusCancelled
+		job.CancelRequested = false
+		job.Error = "job cancelled"
+		completed := time.Now()
+		job.CompletedAt = &completed
+		m.jobs[id] = job
+		return nil
+	case JobStatusRunning:
+		job.CancelRequested = true
+		job.Error = "cancellation requested"
+		m.jobs[id] = job
+		if cancel, ok := m.jobCancels[id]; ok {
+			cancel()
+		}
+		return nil
+	default:
+		return ErrJobNotCancelable
+	}
 }
 
 func (m *JobManager) Enqueue(job *Job) error {
@@ -338,6 +429,10 @@ func (m *JobManager) Close() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.closed = true
+	for _, cancel := range m.jobCancels {
+		cancel()
+	}
+	m.jobCancels = make(map[string]context.CancelFunc)
 	close(m.queue)
 	return nil
 }
@@ -350,6 +445,7 @@ type JobResponse struct {
 	ID          string                 `json:"id"`
 	Type        JobType                `json:"type"`
 	Status      JobStatus              `json:"status"`
+	CancelRequested bool               `json:"cancelRequested,omitempty"`
 	CreatedAt   string                 `json:"createdAt"`
 	StartedAt   *string                `json:"startedAt,omitempty"`
 	CompletedAt *string                `json:"completedAt,omitempty"`
@@ -359,12 +455,13 @@ type JobResponse struct {
 
 func JobToResponse(job *Job) *JobResponse {
 	resp := &JobResponse{
-		ID:        job.ID,
-		Type:      job.Type,
-		Status:    job.Status,
-		CreatedAt: job.CreatedAt.Format(time.RFC3339),
-		Result:    job.Result,
-		Error:     job.Error,
+		ID:              job.ID,
+		Type:            job.Type,
+		Status:          job.Status,
+		CancelRequested: job.CancelRequested,
+		CreatedAt:       job.CreatedAt.Format(time.RFC3339),
+		Result:          job.Result,
+		Error:           job.Error,
 	}
 	if job.StartedAt != nil {
 		t := job.StartedAt.Format(time.RFC3339)
