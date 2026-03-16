@@ -88,6 +88,10 @@ func WriteJSON(w http.ResponseWriter, code int, data interface{}) {
 }
 
 func WriteError(w http.ResponseWriter, r *http.Request, statusCode int, errorCode string, message string) {
+	WriteErrorWithDetails(w, r, statusCode, errorCode, message, nil)
+}
+
+func WriteErrorWithDetails(w http.ResponseWriter, r *http.Request, statusCode int, errorCode string, message string, details map[string]interface{}) {
 	correlationID := middleware.GetReqID(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Correlation-ID", correlationID)
@@ -96,6 +100,7 @@ func WriteError(w http.ResponseWriter, r *http.Request, statusCode int, errorCod
 		Error: ErrorBody{
 			Code:          errorCode,
 			Message:       message,
+			Details:       details,
 			CorrelationID: correlationID,
 		},
 	})
@@ -145,6 +150,7 @@ const (
 	ErrMsgJobNotFound      = "job not found"
 	ErrMsgInvalidStoreName = "invalid store name"
 	ErrMsgPathTraversal    = "invalid store name: path traversal detected"
+	ErrMsgDuplicateJob     = "job already running for requested scope"
 	ErrMsgBackupNotFound   = "backup not found"
 	ErrMsgBackupCorrupted  = "backup archive is corrupted"
 	ErrMsgScopeMismatch    = "backup scope does not match target store"

@@ -60,6 +60,10 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.jobsMgr.Enqueue(job); err != nil {
+		if dupErr, ok := jobs.DuplicateJobErrorFrom(err); ok {
+			WriteErrorWithDetails(w, r, http.StatusConflict, ErrCodeConflict, ErrMsgDuplicateJob, map[string]interface{}{"jobId": dupErr.ExistingJobID})
+			return
+		}
 		WriteError(w, r, http.StatusInternalServerError, ErrCodeInternal, ErrMsgJobEnqueueFailed)
 		return
 	}
@@ -114,6 +118,10 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.jobsMgr.Enqueue(job); err != nil {
+		if dupErr, ok := jobs.DuplicateJobErrorFrom(err); ok {
+			WriteErrorWithDetails(w, r, http.StatusConflict, ErrCodeConflict, ErrMsgDuplicateJob, map[string]interface{}{"jobId": dupErr.ExistingJobID})
+			return
+		}
 		WriteError(w, r, http.StatusInternalServerError, ErrCodeInternal, ErrMsgJobEnqueueFailed)
 		return
 	}

@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -40,6 +41,27 @@ type Job struct {
 }
 
 type JobHandler func(ctx context.Context, job *Job) error
+
+type DuplicateJobError struct {
+	ExistingJobID string
+	JobType       JobType
+	Scope         string
+}
+
+func (e *DuplicateJobError) Error() string {
+	return fmt.Sprintf("duplicate job for type=%s scope=%s", e.JobType, e.Scope)
+}
+
+func IsDuplicateJobError(err error) bool {
+	var dupErr *DuplicateJobError
+	return errors.As(err, &dupErr)
+}
+
+func DuplicateJobErrorFrom(err error) (*DuplicateJobError, bool) {
+	var dupErr *DuplicateJobError
+	ok := errors.As(err, &dupErr)
+	return dupErr, ok
+}
 
 type JobManager struct {
 	mu            sync.RWMutex
@@ -170,17 +192,65 @@ func (m *JobManager) Enqueue(job *Job) error {
 		return fmt.Errorf("job manager is closed")
 	}
 
+	scope, shouldDedupe := dedupeScope(job)
+	if shouldDedupe {
+		for _, existing := range m.jobs {
+			if existing.Type != job.Type {
+				continue
+			}
+			existingScope, existingShouldDedupe := dedupeScope(existing)
+			if !existingShouldDedupe || existingScope != scope {
+				continue
+			}
+			if existing.Status == JobStatusQueued || existing.Status == JobStatusRunning {
+				return &DuplicateJobError{
+					ExistingJobID: existing.ID,
+					JobType:       existing.Type,
+					Scope:         scope,
+				}
+			}
+		}
+	}
+
 	job.ID = generateJobID()
 	job.Status = JobStatusQueued
 	job.CreatedAt = time.Now()
 
-	m.jobs[job.ID] = job
-
 	select {
 	case m.queue <- job:
+		m.jobs[job.ID] = job
 		return nil
 	default:
 		return fmt.Errorf("job queue is full")
+	}
+}
+
+func dedupeScope(job *Job) (string, bool) {
+	if job == nil {
+		return "", false
+	}
+
+	switch job.Type {
+	case JobStoreScan:
+		return "global", true
+	case JobBackupCreate:
+		scope := "all"
+		if job.Payload != nil {
+			if v, ok := job.Payload["scope"].(string); ok && v != "" {
+				scope = v
+			}
+		}
+		return scope, true
+	case JobBackupRestore:
+		targetStore := "all"
+		if job.Payload != nil {
+			if v, ok := job.Payload["targetStore"].(string); ok && v != "" {
+				targetStore = v
+			}
+		}
+		return targetStore, true
+	default:
+		return "", false
 	}
 }
 
