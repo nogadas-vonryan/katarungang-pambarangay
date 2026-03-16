@@ -161,8 +161,8 @@ Separate loggers for each type (FR-13):
 - Job statuses: queued, running, completed, failed
 
 ### 7.2 Job Endpoints
-- `GET /jobs` - list jobs
-- `GET /jobs/{id}` - job status
+- `GET /v1/jobs` - list jobs
+- `GET /v1/jobs/{id}` - job status
 - `POST /v1/stores/reload` returns 202 with job ID
 
 ---

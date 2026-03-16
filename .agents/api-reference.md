@@ -85,14 +85,14 @@ Returns server status, run mode, discovered stores, and index readiness.
 `DELETE /logs/audit` — purge audit log (admin, itself produces an audit entry)
 
 ### Jobs
-`GET /jobs` — list active and recent jobs
-`GET /jobs/{job-id}` — job status and progress
-`DELETE /jobs/{job-id}` — cancel job
+`GET /v1/jobs` — list active and recent jobs
+`GET /v1/jobs/{job-id}` — job status and progress
+`POST /v1/jobs/{job-id}/cancel` — cancel job
 
 ### Backups
-`GET /backups` — list backup archives
-`POST /backups` — trigger backup (`scope={store-name}` or `scope=all`)
-`POST /backups/{backup-name}/restore` — initiate restore
+`GET /v1/backups` — list backup archives
+`POST /v1/backups` — trigger backup (`scope={store-name}` or `scope=all`)
+`POST /v1/backups/{backup-name}/restore` — initiate restore
 
 ### Stores
 `GET /v1/stores` — list registered stores

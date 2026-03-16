@@ -431,11 +431,11 @@ The `appname` value shall be configurable at startup.
 
 **FR-18.3** Each job shall have one of the following statuses: `queued`, `running`, `completed`, `failed`, or `cancelled`.
 
-**FR-18.4** The server shall expose a job status endpoint at `GET /jobs/{job-id}` that returns the current status, progress information (where applicable, e.g. files scanned out of total), start time, end time, and any error details on failure.
+**FR-18.4** The server shall expose a job status endpoint at `GET /v1/jobs/{job-id}` that returns the current status, progress information (where applicable, e.g. files scanned out of total), start time, end time, and any error details on failure.
 
-**FR-18.5** The server shall expose a job list endpoint at `GET /jobs` returning all active and recently completed jobs. Completed and failed jobs shall be retained in memory for a configurable duration before being discarded.
+**FR-18.5** The server shall expose a job list endpoint at `GET /v1/jobs` returning all active and recently completed jobs. Completed and failed jobs shall be retained in memory for a configurable duration before being discarded.
 
-**FR-18.6** The server shall support cancelling a queued or running job via `DELETE /jobs/{job-id}`. Cancellation shall be best-effort — jobs that have reached a point of no return (e.g. mid-write during restore) shall complete the current atomic unit before stopping.
+**FR-18.6** The server shall support cancelling a queued or running job via `POST /v1/jobs/{job-id}/cancel`. Cancellation shall be best-effort — jobs that have reached a point of no return (e.g. mid-write during restore) shall complete the current atomic unit before stopping.
 
 **FR-18.7** The server shall enforce a configurable limit on the number of concurrently running jobs. Requests that would exceed this limit shall be queued rather than rejected.
 
