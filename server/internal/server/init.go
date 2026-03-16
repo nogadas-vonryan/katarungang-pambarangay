@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -85,6 +86,9 @@ func (s *Server) initJobs() error {
 
 		result, err := s.backupMgr.CreateBackup(ctx, scope, storePaths, createdBy)
 		if err != nil {
+			if errorResult, ok := backupJobErrorResult(err); ok {
+				job.Result = errorResult
+			}
 			return fmt.Errorf("create backup: %w", err)
 		}
 
@@ -111,6 +115,9 @@ func (s *Server) initJobs() error {
 
 		result, err := s.backupMgr.RestoreBackup(ctx, backupName, targetStore, opts)
 		if err != nil {
+			if errorResult, ok := backupJobErrorResult(err); ok {
+				job.Result = errorResult
+			}
 			return fmt.Errorf("restore backup: %w", err)
 		}
 
@@ -375,4 +382,53 @@ func decodeStorePathsPayload(v interface{}) (map[string]backup.StoreInfo, error)
 	}
 
 	return storePaths, nil
+}
+
+func backupJobErrorResult(err error) (map[string]interface{}, bool) {
+	status := http.StatusInternalServerError
+	errorCode := handlers.ErrCodeInternal
+	message := err.Error()
+
+	switch {
+	case errors.Is(err, backup.ErrBackupNotFound):
+		status = http.StatusNotFound
+		errorCode = handlers.ErrCodeBackupNotFound
+		message = handlers.ErrMsgBackupNotFound
+	case errors.Is(err, backup.ErrStoreNotFound):
+		status = http.StatusNotFound
+		errorCode = handlers.ErrCodeNotFound
+		message = handlers.ErrMsgStoreNotFound
+	case errors.Is(err, backup.ErrBackupCorrupted), errors.Is(err, backup.ErrInvalidManifest):
+		status = http.StatusUnprocessableEntity
+		errorCode = handlers.ErrCodeBackupCorrupted
+		message = handlers.ErrMsgBackupCorrupted
+	case errors.Is(err, backup.ErrScopeMismatch):
+		status = http.StatusConflict
+		errorCode = handlers.ErrCodeScopeMismatch
+		message = handlers.ErrMsgScopeMismatch
+	case errors.Is(err, backup.ErrStoreLocked):
+		status = http.StatusConflict
+		errorCode = handlers.ErrCodeStoreLocked
+		message = handlers.ErrMsgStoreLocked
+	case errors.Is(err, backup.ErrBackupInProgress), errors.Is(err, backup.ErrRestoreInProgress):
+		status = http.StatusConflict
+		errorCode = handlers.ErrCodeConflict
+		message = handlers.ErrMsgDuplicateJob
+	case errors.Is(err, backup.ErrInsufficientSpace):
+		status = http.StatusPreconditionFailed
+		errorCode = handlers.ErrCodePreconditionFailed
+		message = err.Error()
+	case errors.Is(err, backup.ErrRestoreFailed):
+		status = http.StatusInternalServerError
+		errorCode = handlers.ErrCodeInternal
+		message = err.Error()
+	default:
+		return nil, false
+	}
+
+	return map[string]interface{}{
+		"errorCode":    errorCode,
+		"errorMessage": message,
+		"httpStatus":   status,
+	}, true
 }
