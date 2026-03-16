@@ -130,10 +130,6 @@ func (s *Server) getStore(name string) (store.Store, bool) {
 	return st, ok
 }
 
-func contextWithUser(ctx context.Context, user interface{}) context.Context {
-	return context.WithValue(ctx, ctxKeyUser, user)
-}
-
 func contextWithRequestID(ctx context.Context, id string) context.Context {
 	return context.WithValue(ctx, middleware.RequestIDKey, id)
 }

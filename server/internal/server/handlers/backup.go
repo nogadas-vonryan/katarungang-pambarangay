@@ -9,12 +9,12 @@ import (
 )
 
 type BackupHandler struct {
-	backupMgr *backup.BackupManager
+	backupMgr BackupManager
 	jobsMgr   *jobs.JobManager
 	provider  StoreProvider
 }
 
-func NewBackupHandler(backupMgr *backup.BackupManager, jobsMgr *jobs.JobManager, provider StoreProvider) *BackupHandler {
+func NewBackupHandler(backupMgr BackupManager, jobsMgr *jobs.JobManager, provider StoreProvider) *BackupHandler {
 	return &BackupHandler{
 		backupMgr: backupMgr,
 		jobsMgr:   jobsMgr,
@@ -23,8 +23,7 @@ func NewBackupHandler(backupMgr *backup.BackupManager, jobsMgr *jobs.JobManager,
 }
 
 type createBackupRequest struct {
-	Scope     string `json:"scope"`
-	CreatedBy string `json:"createdBy,omitempty"`
+	Scope string `json:"scope"`
 }
 
 func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +45,7 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	storePaths := h.getStorePaths()
-	createdBy := req.CreatedBy
+	createdBy := GetUsername(r)
 	if createdBy == "" {
 		createdBy = "system"
 	}
@@ -73,27 +72,16 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 
 func (h *BackupHandler) ListBackups(w http.ResponseWriter, r *http.Request) {
 	backups := h.backupMgr.ListBackups()
-	resp := make([]map[string]interface{}, len(backups))
-	for i, b := range backups {
-		resp[i] = map[string]interface{}{
-			"name":        b.Name,
-			"scope":       b.Scope,
-			"scopeType":   b.ScopeType,
-			"size":        b.Size,
-			"timestamp":   b.Timestamp,
-			"recordCount": b.RecordCount,
-			"createdBy":   b.CreatedBy,
-		}
-	}
 	WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"backups": resp,
-		"total":   len(resp),
+		"backups": backups,
+		"total":   len(backups),
 	})
 }
 
 type restoreBackupRequest struct {
-	TargetStore string                `json:"targetStore"`
-	Opts        backup.RestoreOptions `json:"opts"`
+	TargetStore string `json:"targetStore"`
+	DryRun      bool   `json:"dryRun,omitempty"`
+	Force       bool   `json:"force,omitempty"`
 }
 
 func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +108,8 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 		Payload: map[string]interface{}{
 			"backupName":  backupName,
 			"targetStore": req.TargetStore,
-			"opts":        req.Opts,
+			"dryRun":      req.DryRun,
+			"force":       req.Force,
 		},
 	}
 

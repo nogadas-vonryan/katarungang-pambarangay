@@ -116,14 +116,9 @@ func (s *Server) initJobs() error {
 		backupName, _ := job.Payload["backupName"].(string)
 		targetStore, _ := job.Payload["targetStore"].(string)
 
-		optsMap, ok := job.Payload["opts"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("invalid opts payload")
-		}
-
 		opts := backup.RestoreOptions{
-			DryRun: getBool(optsMap, "dryRun"),
-			Force:  getBool(optsMap, "force"),
+			DryRun: getBool(job.Payload, "dryRun"),
+			Force:  getBool(job.Payload, "force"),
 		}
 
 		result, err := s.backupMgr.RestoreBackup(ctx, backupName, targetStore, opts)

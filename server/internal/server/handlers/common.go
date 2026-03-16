@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -9,6 +10,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/kp-cms/server/internal/store"
 )
+
+type ctxKey int
+
+const (
+	ctxKeyUsername ctxKey = iota
+)
+
+func GetUsername(r *http.Request) string {
+	if username, ok := r.Context().Value(ctxKeyUsername).(string); ok {
+		return username
+	}
+	return ""
+}
+
+func SetUsername(ctx context.Context, username string) context.Context {
+	return context.WithValue(ctx, ctxKeyUsername, username)
+}
 
 type StoreAccessor struct {
 	stores  map[string]store.Store
