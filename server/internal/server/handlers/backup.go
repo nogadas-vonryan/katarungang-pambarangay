@@ -103,7 +103,7 @@ type restoreBackupRequest struct {
 func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	backupName := chi.URLParam(r, "name")
 
-	_, err := h.backupMgr.GetBackup(backupName)
+	backupMeta, err := h.backupMgr.GetBackup(backupName)
 	if err != nil {
 		WriteError(w, r, http.StatusNotFound, ErrCodeBackupNotFound, ErrMsgBackupNotFound)
 		return
@@ -116,7 +116,11 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.TargetStore == "" {
-		req.TargetStore = "all"
+		if backupMeta.Scope != "all" {
+			req.TargetStore = backupMeta.Scope
+		} else {
+			req.TargetStore = "all"
+		}
 	}
 	if req.TargetStore != "all" {
 		if _, ok := h.provider.Get(req.TargetStore); !ok {
