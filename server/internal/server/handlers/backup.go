@@ -1,7 +1,12 @@
 package handlers
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/kp-cms/server/internal/backup"
@@ -27,18 +32,22 @@ type createBackupRequest struct {
 }
 
 func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
-	var req createBackupRequest
-	if err := decodeJSON(w, r, &req); err != nil {
-		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, ErrMsgInvalidBody)
-		return
+	scope := strings.TrimSpace(r.URL.Query().Get("scope"))
+	if scope == "" {
+		var req createBackupRequest
+		if err := decodeJSONOptional(r, &req); err != nil {
+			WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, ErrMsgInvalidBody)
+			return
+		}
+		scope = strings.TrimSpace(req.Scope)
 	}
 
-	if req.Scope == "" {
-		req.Scope = "all"
+	if scope == "" {
+		scope = "all"
 	}
 
-	if req.Scope != "all" {
-		if _, ok := h.provider.Get(req.Scope); !ok {
+	if scope != "all" {
+		if _, ok := h.provider.Get(scope); !ok {
 			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
 			return
 		}
@@ -53,7 +62,7 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	job := &jobs.Job{
 		Type: jobs.JobBackupCreate,
 		Payload: map[string]interface{}{
-			"scope":      req.Scope,
+			"scope":      scope,
 			"storePaths": storePaths,
 			"createdBy":  createdBy,
 		},
@@ -69,8 +78,10 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
-		"jobId":   job.ID,
-		"message": "backup creation initiated",
+		"jobId":     job.ID,
+		"type":      job.Type,
+		"statusUrl": fmt.Sprintf("/jobs/%s", job.ID),
+		"message":   "backup creation started",
 	})
 }
 
@@ -84,6 +95,7 @@ func (h *BackupHandler) ListBackups(w http.ResponseWriter, r *http.Request) {
 
 type restoreBackupRequest struct {
 	TargetStore string `json:"targetStore"`
+	Mode        string `json:"mode,omitempty"`
 	DryRun      bool   `json:"dryRun,omitempty"`
 	Force       bool   `json:"force,omitempty"`
 }
@@ -98,7 +110,7 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req restoreBackupRequest
-	if err := decodeJSON(w, r, &req); err != nil {
+	if err := decodeJSONOptional(r, &req); err != nil {
 		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, ErrMsgInvalidBody)
 		return
 	}
@@ -106,12 +118,27 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	if req.TargetStore == "" {
 		req.TargetStore = "all"
 	}
+	if req.TargetStore != "all" {
+		if _, ok := h.provider.Get(req.TargetStore); !ok {
+			WriteError(w, r, http.StatusNotFound, ErrCodeNotFound, ErrMsgStoreNotFound)
+			return
+		}
+	}
+
+	if req.Mode == "" {
+		req.Mode = "overwrite"
+	}
+	if req.Mode != "overwrite" {
+		WriteError(w, r, http.StatusBadRequest, ErrCodeBadRequest, ErrMsgInvalidRestoreMode)
+		return
+	}
 
 	job := &jobs.Job{
 		Type: jobs.JobBackupRestore,
 		Payload: map[string]interface{}{
 			"backupName":  backupName,
 			"targetStore": req.TargetStore,
+			"mode":        req.Mode,
 			"dryRun":      req.DryRun,
 			"force":       req.Force,
 		},
@@ -127,9 +154,27 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
-		"jobId":   job.ID,
-		"message": "restore initiated",
+		"jobId":     job.ID,
+		"type":      job.Type,
+		"statusUrl": fmt.Sprintf("/jobs/%s", job.ID),
+		"message":   "restore operation started",
 	})
+}
+
+func decodeJSONOptional(r *http.Request, v interface{}) error {
+	if r.Body == nil {
+		return nil
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(v); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (h *BackupHandler) getStorePaths() map[string]backup.StoreInfo {

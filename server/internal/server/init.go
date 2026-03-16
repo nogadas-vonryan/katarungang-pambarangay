@@ -91,6 +91,7 @@ func (s *Server) initJobs() error {
 		job.Result = map[string]interface{}{
 			"backupName":     result.BackupName,
 			"filesProcessed": result.FilesProcessed,
+			"totalFiles":     result.TotalFiles,
 			"recordCount":    result.RecordCount,
 			"bytesWritten":   result.BytesWritten,
 		}
@@ -114,7 +115,9 @@ func (s *Server) initJobs() error {
 		}
 
 		job.Result = map[string]interface{}{
+			"dryRun":      opts.DryRun,
 			"recordCount": result.RecordCount,
+			"storeType":   result.StoreType,
 			"wouldDelete": result.WouldDelete,
 			"wouldCreate": result.WouldCreate,
 			"wouldUpdate": result.WouldUpdate,
