@@ -1,11 +1,11 @@
 info:
-  name: Delete File
+  name: Get All Backups
   type: http
-  seq: 4
+  seq: 1
 
 http:
-  method: DELETE
-  url: http://{{base_url}}/v1/cases/records/case-007-26/files/caffeine.png
+  method: GET
+  url: http://{{base_url}}/v1/backups
   auth: inherit
 
 settings:

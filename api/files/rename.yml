@@ -1,10 +1,10 @@
 info:
-  name: Delete File
+  name: Rename File
   type: http
-  seq: 4
+  seq: 5
 
 http:
-  method: DELETE
+  method: PATCH
   url: http://{{base_url}}/v1/cases/records/case-007-26/files/caffeine.png
   auth: inherit
 

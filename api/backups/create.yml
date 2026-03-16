@@ -1,11 +1,11 @@
 info:
-  name: Delete File
+  name: Create Backup
   type: http
-  seq: 4
+  seq: 2
 
 http:
-  method: DELETE
-  url: http://{{base_url}}/v1/cases/records/case-007-26/files/caffeine.png
+  method: POST
+  url: http://{{base_url}}/v1/backups?scope=cases
   auth: inherit
 
 settings:
