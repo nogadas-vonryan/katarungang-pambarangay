@@ -78,22 +78,9 @@ func (s *Server) initJobs() error {
 		scope, _ := job.Payload["scope"].(string)
 		createdBy, _ := job.Payload["createdBy"].(string)
 
-		storePathsRaw, ok := job.Payload["storePaths"].(map[string]interface{})
-		if !ok {
-			return fmt.Errorf("invalid storePaths payload")
-		}
-
-		storePaths := make(map[string]backup.StoreInfo, len(storePathsRaw))
-		for name, v := range storePathsRaw {
-			infoMap, ok := v.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			storePaths[name] = backup.StoreInfo{
-				Name: getString(infoMap, "name"),
-				Path: getString(infoMap, "path"),
-				Type: getString(infoMap, "type"),
-			}
+		storePaths, err := decodeStorePathsPayload(job.Payload["storePaths"])
+		if err != nil {
+			return err
 		}
 
 		result, err := s.backupMgr.CreateBackup(ctx, scope, storePaths, createdBy)
@@ -359,4 +346,30 @@ func getBool(m map[string]interface{}, key string) bool {
 		return v
 	}
 	return false
+}
+
+func decodeStorePathsPayload(v interface{}) (map[string]backup.StoreInfo, error) {
+	if typed, ok := v.(map[string]backup.StoreInfo); ok {
+		return typed, nil
+	}
+
+	raw, ok := v.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid storePaths payload")
+	}
+
+	storePaths := make(map[string]backup.StoreInfo, len(raw))
+	for name, entry := range raw {
+		infoMap, ok := entry.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		storePaths[name] = backup.StoreInfo{
+			Name: getString(infoMap, "name"),
+			Path: getString(infoMap, "path"),
+			Type: getString(infoMap, "type"),
+		}
+	}
+
+	return storePaths, nil
 }
