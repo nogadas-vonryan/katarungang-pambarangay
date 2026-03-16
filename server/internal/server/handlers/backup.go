@@ -80,7 +80,7 @@ func (h *BackupHandler) CreateBackup(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
 		"jobId":     job.ID,
 		"type":      job.Type,
-		"statusUrl": fmt.Sprintf("/jobs/%s", job.ID),
+		"statusUrl": fmt.Sprintf("/v1/jobs/%s", job.ID),
 		"message":   "backup creation started",
 	})
 }
@@ -160,7 +160,7 @@ func (h *BackupHandler) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	WriteJSON(w, http.StatusAccepted, map[string]interface{}{
 		"jobId":     job.ID,
 		"type":      job.Type,
-		"statusUrl": fmt.Sprintf("/jobs/%s", job.ID),
+		"statusUrl": fmt.Sprintf("/v1/jobs/%s", job.ID),
 		"message":   "restore operation started",
 	})
 }

@@ -35,16 +35,16 @@ var (
 )
 
 type Job struct {
-	ID          string                 `json:"id"`
-	Type        JobType                `json:"type"`
-	Status      JobStatus              `json:"status"`
-	CancelRequested bool               `json:"cancelRequested,omitempty"`
-	Payload     map[string]interface{} `json:"payload,omitempty"`
-	Result      map[string]interface{} `json:"result,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	CreatedAt   time.Time              `json:"createdAt"`
-	StartedAt   *time.Time             `json:"startedAt,omitempty"`
-	CompletedAt *time.Time             `json:"completedAt,omitempty"`
+	ID              string                 `json:"id"`
+	Type            JobType                `json:"type"`
+	Status          JobStatus              `json:"status"`
+	CancelRequested bool                   `json:"cancelRequested,omitempty"`
+	Payload         map[string]interface{} `json:"payload,omitempty"`
+	Result          map[string]interface{} `json:"result,omitempty"`
+	Error           string                 `json:"error,omitempty"`
+	CreatedAt       time.Time              `json:"createdAt"`
+	StartedAt       *time.Time             `json:"startedAt,omitempty"`
+	CompletedAt     *time.Time             `json:"completedAt,omitempty"`
 }
 
 type JobHandler func(ctx context.Context, job *Job) error
@@ -442,15 +442,15 @@ func generateJobID() string {
 }
 
 type JobResponse struct {
-	ID          string                 `json:"id"`
-	Type        JobType                `json:"type"`
-	Status      JobStatus              `json:"status"`
-	CancelRequested bool               `json:"cancelRequested,omitempty"`
-	CreatedAt   string                 `json:"createdAt"`
-	StartedAt   *string                `json:"startedAt,omitempty"`
-	CompletedAt *string                `json:"completedAt,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	Result      map[string]interface{} `json:"result,omitempty"`
+	ID              string                 `json:"id"`
+	Type            JobType                `json:"type"`
+	Status          JobStatus              `json:"status"`
+	CancelRequested bool                   `json:"cancelRequested,omitempty"`
+	CreatedAt       string                 `json:"createdAt"`
+	StartedAt       *string                `json:"startedAt,omitempty"`
+	CompletedAt     *string                `json:"completedAt,omitempty"`
+	Error           string                 `json:"error,omitempty"`
+	Result          map[string]interface{} `json:"result,omitempty"`
 }
 
 func JobToResponse(job *Job) *JobResponse {
