@@ -58,7 +58,7 @@ func (s *Server) requestIDMiddleware(next http.Handler) http.Handler {
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
-		if token != "" {
+		if token == "" {
 			if cookie, err := r.Cookie("session"); err == nil {
 				token = cookie.Value
 			}
