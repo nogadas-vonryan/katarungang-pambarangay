@@ -14,6 +14,26 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        if (res.status === 200) {
+          const current = bru.getVar("test_filename") || bru.getEnvVar("test_filename");
+          const renamed = bru.getVar("renamed_test_filename") || bru.getEnvVar("renamed_test_filename");
+          if (renamed) {
+            bru.setVar("test_filename", String(renamed));
+          }
+          if (current) {
+            bru.setVar("renamed_test_filename", String(current));
+          }
+        }
+    - type: tests
+      code: |-
+        test("rename file returns 200", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

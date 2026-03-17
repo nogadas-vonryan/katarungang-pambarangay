@@ -8,6 +8,25 @@ http:
   url: "{{base_url}}/v1/backups"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.body || {};
+        const backups = Array.isArray(body.backups) ? body.backups : [];
+        if (backups.length > 0 && backups[0] && backups[0].name) {
+          bru.setVar("backup_name", String(backups[0].name));
+        }
+    - type: tests
+      code: |-
+        test("list backups requires valid auth", function () {
+          expect(res.status).to.not.equal(401);
+        });
+
+        test("list backups returns 200", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

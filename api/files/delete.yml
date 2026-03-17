@@ -8,6 +8,14 @@ http:
   url: "{{base_url}}/v1/cases/records/{{case_id}}/files/{{test_filename}}"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("delete file returns no content", function () {
+          expect(res.status).to.equal(204);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

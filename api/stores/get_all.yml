@@ -8,6 +8,14 @@ http:
   url: "{{base_url}}/v1/stores"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("list stores requires valid auth", function () {
+          expect(res.status).to.not.equal(401);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

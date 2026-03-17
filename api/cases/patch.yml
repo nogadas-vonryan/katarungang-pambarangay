@@ -18,6 +18,20 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const etag = res.getHeader("etag") || res.getHeader("ETag");
+        if (etag) {
+          bru.setVar("case_etag", String(etag));
+        }
+    - type: tests
+      code: |-
+        test("patch case returns 200", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

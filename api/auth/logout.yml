@@ -8,6 +8,17 @@ http:
   url: "{{base_url}}/auth/logout"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        bru.deleteVar("auth_token");
+    - type: tests
+      code: |-
+        test("logout returns success status", function () {
+          expect(res.status).to.be.oneOf([200, 204]);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

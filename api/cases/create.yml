@@ -20,6 +20,26 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.body || {};
+        if (res.status === 201 && body.id) {
+          bru.setVar("case_id", String(body.id));
+        }
+    - type: tests
+      code: |-
+        test("create case returns 201", function () {
+          expect(res.status).to.equal(201);
+        });
+
+        test("create case response has id", function () {
+          expect(res.body).to.be.an("object");
+          expect(res.body.id).to.be.a("string");
+          expect(res.body.id.length).to.be.greaterThan(0);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

@@ -8,6 +8,14 @@ http:
   url: "{{base_url}}/v1/jobs/{{job_id}}/cancel"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("cancel job returns expected status", function () {
+          expect(res.status).to.be.oneOf([202, 404, 409]);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

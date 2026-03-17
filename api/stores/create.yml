@@ -71,6 +71,18 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("create store returns expected status", function () {
+          expect(res.status).to.be.oneOf([201, 409]);
+        });
+
+        test("create store does not fail auth", function () {
+          expect(res.status).to.not.equal(401);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

@@ -18,6 +18,21 @@ http:
       }
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.body || {};
+        const token = body.token || body.accessToken || body.authToken;
+        if (token) {
+          bru.setVar("auth_token", String(token));
+        }
+    - type: tests
+      code: |-
+        test("login succeeds", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

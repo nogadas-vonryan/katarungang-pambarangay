@@ -4,8 +4,12 @@
   "description": "KP CMS with Bruno API tests",
   "private": true,
   "scripts": {
-    "test:api": "cd api && bru run auth/login.yml --env-file environments/local.json",
-    "test:api:isolated": "cd api && bru run auth/login.yml --env-file environments/test-isolated.json"
+    "serve:api:isolated": "go run ./server/cmd/server --data-dir ./data-test-isolated --port 8080",
+    "test:api": "npm run test:api:smoke",
+    "test:api:isolated": "npm run test:api:smoke:isolated",
+    "test:api:smoke": "cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/local.json --bail --noproxy",
+    "test:api:smoke:isolated": "cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/test-isolated.json --bail --noproxy",
+    "test:api:mutation": "cd api && bru run system/health.yml system/status.yml system/setup.yml auth/login.yml stores/reload.yml stores/create.yml cases/create.yml cases/get_one.yml cases/put.yml cases/patch.yml files/upload.yml files/get_all.yml files/get_one.yml files/rename.yml files/delete.yml backups/create.yml backups/get_all.yml backups/restore.yml jobs/get_all.yml jobs/cancel.yml cases/delete.yml auth/logout.yml --env-file environments/test-isolated.json --bail --noproxy"
   },
   "devDependencies": {
     "@usebruno/cli": "^3.1.3"

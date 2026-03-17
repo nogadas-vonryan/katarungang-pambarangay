@@ -8,6 +8,14 @@ http:
   url: "{{base_url}}/setup/status"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("setup status endpoint is reachable", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

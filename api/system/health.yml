@@ -8,6 +8,14 @@ http:
   url: "{{base_url}}/health"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("health endpoint returns 200", function () {
+          expect(res.status).to.equal(200);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

@@ -8,6 +8,27 @@ http:
   url: "{{base_url}}/v1/stores/reload"
   auth: inherit
 
+runtime:
+  scripts:
+    - type: after-response
+      code: |-
+        const body = res.body || {};
+        const jobId = body.jobId;
+        if (jobId) {
+          bru.setVar("job_id", String(jobId));
+        }
+    - type: tests
+      code: |-
+        test("reload stores is accepted", function () {
+          expect(res.status).to.equal(202);
+        });
+
+        test("reload stores returns job id", function () {
+          expect(res.body).to.be.an("object");
+          expect(res.body.jobId).to.be.a("string");
+          expect(res.body.jobId.length).to.be.greaterThan(0);
+        });
+
 settings:
   encodeUrl: true
   timeout: 0
