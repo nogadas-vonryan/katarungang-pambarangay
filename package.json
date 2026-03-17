@@ -4,12 +4,13 @@
   "description": "KP CMS with Bruno API tests",
   "private": true,
   "scripts": {
-    "serve:api:isolated": "go run ./server/cmd/server --data-dir ./data-test-isolated --port 8080",
-    "test:api": "npm run test:api:smoke",
-    "test:api:isolated": "npm run test:api:smoke:isolated",
-    "test:api:smoke": "cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/local.json --bail --noproxy",
-    "test:api:smoke:isolated": "cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/test-isolated.json --bail --noproxy",
-    "test:api:mutation": "cd api && bru run system/health.yml system/status.yml system/setup.yml auth/login.yml stores/reload.yml stores/create.yml cases/create.yml cases/get_one.yml cases/put.yml cases/patch.yml files/upload.yml files/get_all.yml files/get_one.yml files/rename.yml files/delete.yml backups/create.yml backups/get_all.yml backups/restore.yml jobs/get_all.yml jobs/cancel.yml cases/delete.yml auth/logout.yml --env-file environments/test-isolated.json --bail --noproxy"
+    "test": "npm run test:managed",
+    "serve": "KP_BOOTSTRAP_USER=admin KP_BOOTSTRAP_PASSWORD=admin go run ./server/cmd/server --data-dir ./data --port 8080",
+    "serve:testdata": "KP_BOOTSTRAP_USER=admin KP_BOOTSTRAP_PASSWORD=admin go run ./server/cmd/server --data-dir ./data-test --port 8080",
+    "auth:reset:testdata": "rm -f ./data-test/.system/auth.db",
+    "test:managed": "sh -c 'if curl -fsS http://localhost:18080/health >/dev/null 2>&1; then echo \"Port 18080 is already in use. Stop that server and rerun npm test.\"; exit 1; fi; npm run auth:reset:testdata && KP_BOOTSTRAP_USER=admin KP_BOOTSTRAP_PASSWORD=admin go run ./server/cmd/server --data-dir ./data-test --port 18080 > /tmp/kp-api-all.log 2>&1 & pid=$!; trap \"kill $pid 2>/dev/null || true\" EXIT; i=0; until curl -fsS http://localhost:18080/health >/dev/null 2>&1; do i=$((i+1)); if [ $i -ge 30 ]; then echo \"Server failed to become ready. See /tmp/kp-api-all.log\"; exit 1; fi; sleep 1; done; cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/test.json --env-var base_url=http://localhost:18080 --env-var auth_username=admin --env-var auth_password=admin --bail --noproxy && bru run system/health.yml system/status.yml system/setup.yml auth/login.yml stores/reload.yml stores/create.yml cases/create.yml cases/get_one.yml cases/put.yml cases/patch.yml files/upload.yml files/get_all.yml files/get_one.yml files/rename.yml files/delete.yml backups/create.yml backups/get_all.yml backups/restore.yml jobs/get_all.yml jobs/cancel.yml cases/delete.yml auth/logout.yml --env-file environments/test.json --env-var base_url=http://localhost:18080 --env-var auth_username=admin --env-var auth_password=admin --bail --noproxy'",
+    "test:smoke": "cd api && bru run system/health.yml system/status.yml auth/login.yml stores/get_all.yml cases/get_all.yml files/get_all.yml backups/get_all.yml jobs/get_all.yml auth/logout.yml --env-file environments/test.json --bail --noproxy",
+    "test:mutation": "cd api && bru run system/health.yml system/status.yml system/setup.yml auth/login.yml stores/reload.yml stores/create.yml cases/create.yml cases/get_one.yml cases/put.yml cases/patch.yml files/upload.yml files/get_all.yml files/get_one.yml files/rename.yml files/delete.yml backups/create.yml backups/get_all.yml backups/restore.yml jobs/get_all.yml jobs/cancel.yml cases/delete.yml auth/logout.yml --env-file environments/test.json --bail --noproxy"
   },
   "devDependencies": {
     "@usebruno/cli": "^3.1.3"

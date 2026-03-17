@@ -1,5 +1,6 @@
 # --- Project data / local env ---
 data/
+data-test/
 .env
 .env.*
 !.env.example

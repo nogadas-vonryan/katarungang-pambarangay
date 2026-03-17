@@ -13,13 +13,37 @@ npm install
 npx bru --version
 ```
 
+## Quick Start
+
+```bash
+# start API server for manual testing
+npm run serve
+
+# run full API test suite (smoke + mutation) in managed mode
+npm test
+```
+
+## Auth Prerequisite (important)
+
+Bruno login requests use `auth_username`/`auth_password`. Those values must match the credentials used to bootstrap the running server.
+
+For manual local testing, start the server with:
+
+```bash
+npm run serve
+```
+
+For test-data mutation runs:
+
+```bash
+npm run auth:reset:testdata
+npm run serve:testdata
+```
+
 ## Environments
 
-### local (`environments/local.yml` or `environments/local.json`)
-For normal local server testing against `http://localhost:8080`.
-
-### test-isolated (`environments/test-isolated.json`)
-For isolated state-changing tests with separate data directory.
+### test (`environments/test.json`)
+For state-changing tests with a dedicated test data directory.
 
 ## Variable Reference
 
@@ -28,25 +52,25 @@ For isolated state-changing tests with separate data directory.
 | `base_url` | Server base URL with scheme | `http://localhost:8080` |
 | `auth_username` | Login username | `admin` |
 | `auth_password` | Login password | `admin` |
-| `data_root` | Server data directory | `./data` (local) or `./data-test-isolated` |
-| `backup_scope` | Backup scope query param for create backup | `cases` |
+| `data_root` | Server data directory | `./data-test` |
+| `backup_scope` | Backup scope query param for create backup | `test-store` |
 | `case_id` | Case record ID for file operations | `case-007-26` |
 | `case_etag` | Optional ETag for PUT/PATCH precondition checks | `` |
 | `test_filename` | Filename for file operations | `placeholder.png` |
 | `renamed_test_filename` | Destination filename for rename operation | `placeholder-renamed.png` |
 | `auth_token` | Authentication token (set after login) | `` |
-| `restore_target_store` | Target store for backup restore body | `cases` |
+| `restore_target_store` | Target store for backup restore body | `test-store` |
 | `restore_mode` | Restore mode for backup restore body | `overwrite` |
 | `restore_dry_run` | Restore dry-run flag | `true` |
 | `restore_force` | Restore force flag | `false` |
 | `backup_name` | Backup filename used for restore endpoint | `cases-2026-02-26T1400.zip` |
 | `store_name` | Store name for create store request body | `cases` |
 | `job_id` | Job ID for job operations | `` |
-| `test_store_name` | Name for isolated test stores | `test-store-{{$timestamp}}` |
+| `test_store_name` | Name for test stores | `test-store` |
 
 ## Suite Execution Map
 
-### Smoke Suite (default, non-destructive)
+### Smoke Suite
 Run order:
 1. `system/health`
 2. `system/status`
@@ -57,12 +81,11 @@ Run order:
 Commands:
 
 ```bash
-# default API check (maps to smoke)
-npm run test:api
+# default API check (maps to full managed suite)
+npm test
 
 # explicit smoke runs
-npm run test:api:smoke
-npm run test:api:smoke:isolated
+npm run test:smoke
 ```
 
 Smoke requests now include test scripts that fail fast on auth regressions (for protected endpoints, `401` is treated as a failure).
@@ -77,24 +100,24 @@ Run order:
 Command:
 
 ```bash
-npm run test:api:mutation
+npm run test:mutation
 ```
 
 Mutation requests now include status assertions and response-chaining scripts.
 
-## Isolation Strategy (required for mutation suite)
+## Test Data Strategy (required for mutation suite)
 
-Use a dedicated disposable data root before running mutations:
+Use a dedicated test data root before running mutations:
 
 ```bash
 # terminal 1
-npm run serve:api:isolated
+npm run serve:testdata
 
 # terminal 2
-npm run test:api:mutation
+npm run test:mutation
 ```
 
-This keeps mutation traffic out of normal local data (`./data`) by using `./data-test-isolated`.
+This keeps mutation traffic out of normal local data (`./data`) by using `./data-test`.
 
 ## Variable Dependencies Between Requests
 
@@ -119,20 +142,26 @@ At runtime, these values are now automatically captured when available:
 If you need per-run values, override at runtime, for example:
 
 ```bash
-npx bru run api/cases/create.yml --env-file api/environments/test-isolated.json --env-var case_id=test-case-$(date +%s)
+npx bru run api/cases/create.yml --env-file api/environments/test.json --env-var case_id=test-case-$(date +%s)
 ```
 
 ## Usage
 
 ```bash
-# Run against local environment
-npm run test:api
+# Recommended default: run full managed suite (smoke + mutation)
+npm test
 
-# Run against isolated test environment
-npm run test:api:smoke:isolated
+# Start local API server for manual testing
+npm run serve
+
+# Run smoke against an already-running test-data server
+npm run test:smoke
+
+# Run full mutation flow (server must already be running)
+npm run test:mutation
 
 # Run a specific request
-npx bru run api/auth/login.yml --env-file api/environments/local.json
+npx bru run api/auth/login.yml --env-file api/environments/test.json
 ```
 
 ## Adding Test Fixtures
