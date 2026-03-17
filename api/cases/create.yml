@@ -5,16 +5,17 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/v1/cases/records
+  url: "{{base_url}}/v1/cases/records"
   body:
     type: json
     data: |-
       {
-        "test": "test data",
+        "title": "Sample case",
+        "status": "filed",
+        "priority": "low",
         "complainants": [
-          "test",
-          "test 2",
-          "test 3"
+          "Complainant A",
+          "Complainant B"
         ]
       }
   auth: inherit

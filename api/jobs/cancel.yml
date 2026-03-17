@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/v1/jobs/{{job_id}}/cancel
+  url: "{{base_url}}/v1/jobs/{{job_id}}/cancel"
   auth: inherit
 
 settings:

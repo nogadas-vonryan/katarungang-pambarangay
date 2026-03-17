@@ -5,7 +5,13 @@ info:
 
 http:
   method: PATCH
-  url: http://{{base_url}}/v1/cases/records/{{case_id}}/files/{{test_filename}}
+  url: "{{base_url}}/v1/cases/records/{{case_id}}/files/{{test_filename}}"
+  body:
+    type: json
+    data: |-
+      {
+        "name": "{{renamed_test_filename}}"
+      }
   auth: inherit
 
 settings:

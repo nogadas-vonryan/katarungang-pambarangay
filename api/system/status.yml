@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: http://{{base_url}}/setup/status
+  url: "{{base_url}}/setup/status"
   auth: inherit
 
 settings:

@@ -3,7 +3,17 @@
   "variables": [
     {
       "name": "base_url",
-      "value": "localhost:8080",
+      "value": "http://localhost:8080",
+      "enabled": true
+    },
+    {
+      "name": "auth_username",
+      "value": "admin",
+      "enabled": true
+    },
+    {
+      "name": "auth_password",
+      "value": "admin",
       "enabled": true
     },
     {
@@ -12,8 +22,18 @@
       "enabled": true
     },
     {
+      "name": "backup_scope",
+      "value": "cases",
+      "enabled": true
+    },
+    {
       "name": "case_id",
       "value": "test-case-001",
+      "enabled": true
+    },
+    {
+      "name": "case_etag",
+      "value": "",
       "enabled": true
     },
     {
@@ -22,8 +42,33 @@
       "enabled": true
     },
     {
+      "name": "renamed_test_filename",
+      "value": "placeholder-renamed.png",
+      "enabled": true
+    },
+    {
       "name": "auth_token",
       "value": "",
+      "enabled": true
+    },
+    {
+      "name": "restore_target_store",
+      "value": "cases",
+      "enabled": true
+    },
+    {
+      "name": "restore_mode",
+      "value": "overwrite",
+      "enabled": true
+    },
+    {
+      "name": "restore_dry_run",
+      "value": "true",
+      "enabled": true
+    },
+    {
+      "name": "restore_force",
+      "value": "false",
       "enabled": true
     },
     {
@@ -34,6 +79,11 @@
     {
       "name": "job_id",
       "value": "",
+      "enabled": true
+    },
+    {
+      "name": "store_name",
+      "value": "test-store-{{$timestamp}}",
       "enabled": true
     },
     {

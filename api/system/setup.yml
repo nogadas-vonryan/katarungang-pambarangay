@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/setup/complete
+  url: "{{base_url}}/setup/complete"
   auth: inherit
 
 settings:

@@ -1,14 +1,34 @@
 name: local
 variables:
   - name: base_url
-    value: localhost:8080
+    value: http://localhost:8080
+  - name: auth_username
+    value: admin
+  - name: auth_password
+    value: admin
   - name: data_root
     value: ./data
+  - name: backup_scope
+    value: cases
   - name: case_id
     value: case-007-26
+  - name: case_etag
+    value: ""
   - name: test_filename
     value: placeholder.png
+  - name: renamed_test_filename
+    value: placeholder-renamed.png
+  - name: restore_target_store
+    value: cases
+  - name: restore_mode
+    value: overwrite
+  - name: restore_dry_run
+    value: true
+  - name: restore_force
+    value: false
   - name: backup_name
     value: cases-2026-02-26T1400.zip
+  - name: store_name
+    value: cases
   - name: job_id
     value: ""

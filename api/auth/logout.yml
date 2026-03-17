@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/auth/logout
+  url: "{{base_url}}/auth/logout"
   auth: inherit
 
 settings:

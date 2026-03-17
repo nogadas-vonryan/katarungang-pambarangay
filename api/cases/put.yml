@@ -5,12 +5,20 @@ info:
 
 http:
   method: PUT
-  url: http://{{base_url}}/v1/cases/records/{{case_id}}
+  url: "{{base_url}}/v1/cases/records/{{case_id}}"
+  headers:
+    - name: If-Match
+      value: "{{case_etag}}"
   body:
     type: json
     data: |-
       {
-        "WOOOOO": "HAAAAAxAA"
+        "title": "Updated case title",
+        "status": "mediation",
+        "priority": "medium",
+        "complainants": [
+          "Complainant A"
+        ]
       }
   auth: inherit
 

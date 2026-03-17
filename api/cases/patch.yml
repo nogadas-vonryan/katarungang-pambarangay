@@ -5,12 +5,16 @@ info:
 
 http:
   method: PATCH
-  url: http://{{base_url}}/v1/cases/records/{{case_id}}
+  url: "{{base_url}}/v1/cases/records/{{case_id}}"
+  headers:
+    - name: If-Match
+      value: "{{case_etag}}"
   body:
     type: json
     data: |-
       {
-        "test": "tdddddesting"
+        "status": "arbitration",
+        "priority": "high"
       }
   auth: inherit
 

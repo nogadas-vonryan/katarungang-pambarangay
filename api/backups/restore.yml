@@ -5,15 +5,15 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/v1/backups/{{backup_name}}/restore
+  url: "{{base_url}}/v1/backups/{{backup_name}}/restore"
   body:
     type: json
     data: |-
       {
-        "targetStore": "cases",
-        "mode": "overwrite",
-        "dryRun": true,
-        "force": false
+        "targetStore": "{{restore_target_store}}",
+        "mode": "{{restore_mode}}",
+        "dryRun": {{restore_dry_run}},
+        "force": {{restore_force}}
       }
   auth: inherit
 
