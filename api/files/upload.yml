@@ -5,14 +5,14 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/v1/cases/records/case-007-26/files
+  url: http://{{base_url}}/v1/cases/records/{{case_id}}/files
   body:
     type: multipart-form
     data:
       - name: file
         type: file
         value:
-          - /home/von/Downloads/caffeine.png
+          - test-fixtures/placeholder.png
   auth: inherit
 
 settings:

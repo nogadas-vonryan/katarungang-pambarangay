@@ -1,0 +1,13 @@
+{
+  "name": "kp-cms-3",
+  "version": "1.0.0",
+  "description": "KP CMS with Bruno API tests",
+  "private": true,
+  "scripts": {
+    "test:api": "cd api && bru run auth/login.yml --env-file environments/local.json",
+    "test:api:isolated": "cd api && bru run auth/login.yml --env-file environments/test-isolated.json"
+  },
+  "devDependencies": {
+    "@usebruno/cli": "^3.1.3"
+  }
+}

@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://{{base_url}}/v1/backups/cases-2026-02-26T1400.zip/restore
+  url: http://{{base_url}}/v1/backups/{{backup_name}}/restore
   body:
     type: json
     data: |-

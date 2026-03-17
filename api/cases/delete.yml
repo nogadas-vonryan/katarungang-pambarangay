@@ -5,7 +5,7 @@ info:
 
 http:
   method: DELETE
-  url: http://{{base_url}}/v1/cases/records/case-001-26
+  url: http://{{base_url}}/v1/cases/records/{{case_id}}
   auth: inherit
 
 settings:

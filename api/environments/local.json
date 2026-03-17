@@ -1,0 +1,35 @@
+{
+  "name": "local",
+  "variables": [
+    {
+      "name": "base_url",
+      "value": "localhost:8080",
+      "enabled": true
+    },
+    {
+      "name": "data_root",
+      "value": "./data",
+      "enabled": true
+    },
+    {
+      "name": "case_id",
+      "value": "case-007-26",
+      "enabled": true
+    },
+    {
+      "name": "test_filename",
+      "value": "placeholder.png",
+      "enabled": true
+    },
+    {
+      "name": "backup_name",
+      "value": "cases-2026-02-26T1400.zip",
+      "enabled": true
+    },
+    {
+      "name": "job_id",
+      "value": "",
+      "enabled": true
+    }
+  ]
+}

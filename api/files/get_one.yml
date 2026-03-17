@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: http://{{base_url}}/v1/cases/records/case-007-26/files/caffeine.png
+  url: http://{{base_url}}/v1/cases/records/{{case_id}}/files/{{test_filename}}
   auth: inherit
 
 settings:

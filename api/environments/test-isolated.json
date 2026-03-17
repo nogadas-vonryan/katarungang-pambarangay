@@ -1,0 +1,45 @@
+{
+  "name": "test-isolated",
+  "variables": [
+    {
+      "name": "base_url",
+      "value": "localhost:8080",
+      "enabled": true
+    },
+    {
+      "name": "data_root",
+      "value": "./data-test-isolated",
+      "enabled": true
+    },
+    {
+      "name": "case_id",
+      "value": "test-case-001",
+      "enabled": true
+    },
+    {
+      "name": "test_filename",
+      "value": "placeholder.png",
+      "enabled": true
+    },
+    {
+      "name": "auth_token",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "name": "backup_name",
+      "value": "test-backup-{{$timestamp}}",
+      "enabled": true
+    },
+    {
+      "name": "job_id",
+      "value": "",
+      "enabled": true
+    },
+    {
+      "name": "test_store_name",
+      "value": "test-store-{{$timestamp}}",
+      "enabled": true
+    }
+  ]
+}

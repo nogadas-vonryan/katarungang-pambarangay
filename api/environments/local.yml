@@ -2,3 +2,13 @@ name: local
 variables:
   - name: base_url
     value: localhost:8080
+  - name: data_root
+    value: ./data
+  - name: case_id
+    value: case-007-26
+  - name: test_filename
+    value: placeholder.png
+  - name: backup_name
+    value: cases-2026-02-26T1400.zip
+  - name: job_id
+    value: ""
