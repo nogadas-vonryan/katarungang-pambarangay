@@ -7,19 +7,44 @@ ROOT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 PORT=18080
 HEALTH_URL="http://localhost:${PORT}/health"
 LOG_FILE="/tmp/kp-api-all.log"
+server_pid=""
 
 if curl -fsS "$HEALTH_URL" >/dev/null 2>&1; then
   printf '%s\n' "Port ${PORT} is already in use. Stop that server and rerun npm test."
   exit 1
 fi
 
-"$ROOT_DIR/scripts/auth-reset-testdata.sh"
+sh "$ROOT_DIR/scripts/auth-reset-testdata.sh"
 
-go run ./server/cmd/server --data-dir ./data-test --port "$PORT" >"$LOG_FILE" 2>&1 &
+if command -v setsid >/dev/null 2>&1; then
+  setsid go run ./server/cmd/server --data-dir ./data-test --port "$PORT" >"$LOG_FILE" 2>&1 &
+else
+  go run ./server/cmd/server --data-dir ./data-test --port "$PORT" >"$LOG_FILE" 2>&1 &
+fi
 pid=$!
 
 cleanup() {
-  kill "$pid" 2>/dev/null || true
+  if [ -z "${pid:-}" ]; then
+    pid=""
+  fi
+
+  if [ -n "${pid:-}" ] && command -v setsid >/dev/null 2>&1; then
+    kill -TERM -- "-$pid" 2>/dev/null || true
+  fi
+
+  if [ -n "${pid:-}" ]; then
+    kill "$pid" 2>/dev/null || true
+    wait "$pid" 2>/dev/null || true
+  fi
+
+  if [ -n "${server_pid:-}" ]; then
+    kill "$server_pid" 2>/dev/null || true
+    wait "$server_pid" 2>/dev/null || true
+  fi
+
+  for candidate in $(pgrep -f "/server --data-dir ./data-test --port ${PORT}" 2>/dev/null || true); do
+    kill "$candidate" 2>/dev/null || true
+  done
 }
 trap cleanup EXIT INT TERM
 
@@ -31,6 +56,11 @@ until curl -fsS "$HEALTH_URL" >/dev/null 2>&1; do
     exit 1
   fi
   sleep 1
+done
+
+for candidate in $(pgrep -f "/server --data-dir ./data-test --port ${PORT}" 2>/dev/null || true); do
+  server_pid="$candidate"
+  break
 done
 
 cd "$ROOT_DIR/api"
